@@ -1,0 +1,21 @@
+<resources>
+    <style name="Theme.FloatingApp" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#07070f</item>
+        <item name="android:statusBarColor">#07070f</item>
+        <item name="android:navigationBarColor">#07070f</item>
+    </style>
+
+    <style name="Theme.Transparent" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <style name="WhiteDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:background">#ffffff</item>
+        <item name="android:textColorPrimary">#1a1a1a</item>
+        <item name="android:textColorSecondary">#9ca3af</item>
+        <item name="colorAccent">#0d9488</item>
+    </style>
+
+</resources>

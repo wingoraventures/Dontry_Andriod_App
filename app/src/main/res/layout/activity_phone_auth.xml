@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F7"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="28dp"
+        android:paddingEnd="28dp"
+        android:paddingBottom="40dp"
+        android:gravity="center_horizontal">
+
+        <View android:layout_width="match_parent" android:layout_height="60dp"/>
+
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:src="@drawable/logo"
+            android:scaleType="fitCenter"
+            android:layout_marginBottom="24dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enter your phone"
+            android:textColor="#1a1a1a"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="We'll send a verification code"
+            android:textColor="#888888"
+            android:textSize="14sp"
+            android:layout_marginBottom="36dp"/>
+
+        <EditText
+            android:id="@+id/etPhone"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_input_rounded"
+            android:hint="+91 98765 43210"
+            android:textColorHint="#BBBBBB"
+            android:textColor="#1a1a1a"
+            android:textSize="15sp"
+            android:inputType="phone"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:layout_marginBottom="20dp"/>
+
+        <Button
+            android:id="@+id/btnSendOtp"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Send OTP"
+            android:textAllCaps="false"
+            android:textColor="#ffffff"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_teal_btn"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:id="@+id/tvBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="← Back to login"
+            android:textColor="#2E9E8A"
+            android:textSize="13sp"/>
+
+    </LinearLayout>
+</ScrollView>

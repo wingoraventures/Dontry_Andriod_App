@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Dontry</string>
+
+    <string name="accessibility_service_description">
+        Dontry Shopping Assistant helps you virtually try on clothing while
+        shopping on Amazon, Flipkart, Myntra and Meesho. This service is used
+        ONLY to detect when you open a clothing product page, show a floating
+        try-on button, and take a screenshot of the product when you tap the
+        try-on button.
+        This service does NOT read, collect or store passwords, payment
+        information, or any personal data.
+    </string>
+
+    <string name="accessibility_service_label">Dontry Shopping Assistant</string>
+    <string name="accessibility_service_summary">Detects clothing product pages on Amazon, Flipkart, Myntra and Meesho to show virtual try-on button</string>
+
+</resources>

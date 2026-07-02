@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#ffffff">
+
+    <!-- ── Scrollable content ── -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="28dp"
+            android:gravity="center_horizontal">
+
+            <!-- ── Hero / Brand Block ── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingTop="24dp"
+                android:paddingBottom="24dp">
+
+                <!-- Logo circle -->
+                <FrameLayout
+                    android:layout_width="88dp"
+                    android:layout_height="88dp"
+                    android:layout_marginBottom="16dp">
+
+                    <View
+                        android:layout_width="88dp"
+                        android:layout_height="88dp"
+                        android:background="@drawable/bg_logo_circle"/>
+
+                    <ImageView
+                        android:layout_width="54dp"
+                        android:layout_height="54dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/logo"
+                        android:scaleType="fitCenter"/>
+                </FrameLayout>
+
+                <!-- Brand name -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dontry"
+                    android:textColor="#0d9488"
+                    android:textSize="30sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="-0.02"
+                    android:layout_marginBottom="5dp"/>
+
+                <!-- Tagline -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Virtual Fitting Room"
+                    android:textColor="#9ca3af"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.08"
+                    android:textAllCaps="true"/>
+
+                <!-- Accent divider -->
+                <View
+                    android:layout_width="36dp"
+                    android:layout_height="2dp"
+                    android:background="#0d9488"
+                    android:layout_marginTop="14dp"
+                    android:alpha="0.35"/>
+            </LinearLayout>
+
+            <!-- Section label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SETUP"
+                android:textColor="#0d9488"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.20"
+                android:layout_marginBottom="6dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Before we begin"
+                android:textColor="#1a1a1a"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Grant 2 permissions so DonTry can detect shopping apps and display the floating try-on button."
+                android:textColor="#9ca3af"
+                android:textSize="13sp"
+                android:lineSpacingMultiplier="1.6"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#f0f0f0"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- Permission Row 1 — Overlay -->
+            <LinearLayout
+                android:id="@+id/rowOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_input"
+                android:orientation="horizontal"
+                android:padding="18dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="10dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:text="1"
+                    android:textColor="#0d9488"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/bg_teal_rounded"
+                    android:layout_marginEnd="16dp"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Display Over Apps"
+                        android:textColor="#1a1a1a"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="2dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shows floating button on shopping apps"
+                        android:textColor="#9ca3af"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/overlayStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#0d9488"
+                    android:textSize="22sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- Permission Row 2 — Accessibility -->
+            <LinearLayout
+                android:id="@+id/rowUsage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_input"
+                android:orientation="horizontal"
+                android:padding="18dp"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <TextView
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:text="2"
+                    android:textColor="#0d9488"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/bg_teal_rounded"
+                    android:layout_marginEnd="16dp"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Accessibility Service"
+                        android:textColor="#1a1a1a"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="2dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Detects apps and takes screenshots for try-on"
+                        android:textColor="#9ca3af"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/usageStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#0d9488"
+                    android:textSize="22sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/restrictedHelpLink"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Toggle greyed out? Tap to open App Info"
+                android:textColor="#0d9488"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:layout_marginBottom="20dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone"/>
+
+            <!-- Privacy note -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="These permissions are used only to power DonTry features and are never shared."
+                android:textColor="#c4c4c4"
+                android:textSize="11sp"
+                android:lineSpacingMultiplier="1.5"
+                android:gravity="center"
+                android:paddingBottom="8dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ── Divider always above button ── -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#f0f0f0"/>
+
+    <!-- ── Button always pinned at bottom ── -->
+    <Button
+        android:id="@+id/btnGrantAll"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginLeft="28dp"
+        android:layout_marginRight="28dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="28dp"
+        android:text="Grant Permissions"
+        android:textColor="#ffffff"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.06"
+        android:textAllCaps="true"
+        android:background="@drawable/bg_teal_btn"/>
+
+</LinearLayout>

@@ -1,0 +1,491 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF">
+
+        <!-- ══ TOP BAR ══════════════════════════════════════════════ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="48dp"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:paddingBottom="14dp"
+            android:gravity="center_vertical"
+            android:background="#FFFFFF">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="VIRTUAL TRY-ON"
+                    android:textColor="#AAAAAA"
+                    android:textSize="10sp"
+                    android:letterSpacing="0.15"/>
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Loading..."
+                    android:textColor="#111111"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- Close X top right -->
+            <TextView
+                android:id="@+id/btnClose"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:text="✕"
+                android:textColor="#888888"
+                android:textSize="18sp"
+                android:gravity="center"
+                android:background="#F2F2F2"
+                android:clickable="true"
+                android:focusable="true"
+                android:visibility="gone"/>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"/>
+
+        <!-- ══ RESULT IMAGE ═════════════════════════════════════════ -->
+        <ImageView
+            android:id="@+id/ivResult"
+            android:layout_width="match_parent"
+            android:layout_height="420dp"
+            android:scaleType="fitCenter"
+            android:background="#F7F7F7"
+            android:layout_margin="16dp"/>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"/>
+
+        <!-- ══ BOTTOM ACTION BUTTONS (unchanged) ════════════════════ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ACTIONS"
+                android:textColor="#AAAAAA"
+                android:textSize="10sp"
+                android:letterSpacing="0.15"
+                android:layout_marginBottom="14dp"
+                android:layout_marginLeft="8dp"/>
+
+            <!-- 4 icon buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <!-- Save to Looks -->
+                <LinearLayout
+                    android:id="@+id/btnSaveToLooks"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:text="👗"
+                        android:textSize="24sp"
+                        android:gravity="center"
+                        android:background="#FFF0EA"/>
+
+                    <TextView
+                        android:id="@+id/tvSaveLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Save Look"
+                        android:textColor="#333333"
+                        android:textSize="11sp"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+                <!-- Download -->
+                <LinearLayout
+                    android:id="@+id/btnDownload"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:text="⬇"
+                        android:textSize="24sp"
+                        android:gravity="center"
+                        android:background="#E8F8F6"
+                        android:textColor="#2BB5A0"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Download"
+                        android:textColor="#333333"
+                        android:textSize="11sp"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+                <!-- Share -->
+                <LinearLayout
+                    android:id="@+id/btnShare"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:text="↗"
+                        android:textSize="24sp"
+                        android:gravity="center"
+                        android:background="#F0EBFF"
+                        android:textColor="#7C3AED"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Share"
+                        android:textColor="#333333"
+                        android:textSize="11sp"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+                <!-- Close -->
+                <LinearLayout
+                    android:id="@+id/btnCloseBottom"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:text="✕"
+                        android:textSize="22sp"
+                        android:gravity="center"
+                        android:background="#F2F2F2"
+                        android:textColor="#888888"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Close"
+                        android:textColor="#AAAAAA"
+                        android:textSize="11sp"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"/>
+                </LinearLayout>
+
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ══════════════════════════════════════════════════════════
+             FEEDBACK SECTION  (below the 4 buttons)
+             ══════════════════════════════════════════════════════════ -->
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#F0F0F0"/>
+
+        <!-- "Would you buy this?" header row — tap to expand -->
+        <LinearLayout
+            android:id="@+id/llBuyNowHeader"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Would you buy this? 🛍️"
+                android:textColor="#111111"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="▼"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+        <!-- Collapsible feedback content (hidden by default) -->
+        <LinearLayout
+            android:id="@+id/feedbackSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingBottom="16dp">
+
+            <!-- Yes / No buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:id="@+id/btnFeedbackYes"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="Yes"
+                    android:gravity="center"
+                    android:textColor="#333333"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:background="#F2F2F2"
+                    android:layout_marginEnd="8dp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/btnFeedbackNo"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:text="No"
+                    android:gravity="center"
+                    android:textColor="#333333"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:background="#F2F2F2"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </LinearLayout>
+
+            <!-- ── If YES: What did you love? ── -->
+            <LinearLayout
+                android:id="@+id/loveSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="What did you love most? ❤️"
+                    android:textColor="#333333"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btnLovePrice"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Price"
+                        android:gravity="center"
+                        android:textColor="#333333"
+                        android:textSize="13sp"
+                        android:background="#F2F2F2"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true"/>
+
+                    <TextView
+                        android:id="@+id/btnLoveDesign"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Design"
+                        android:gravity="center"
+                        android:textColor="#333333"
+                        android:textSize="13sp"
+                        android:background="#F2F2F2"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true"/>
+
+                    <TextView
+                        android:id="@+id/btnLoveFit"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Fit"
+                        android:gravity="center"
+                        android:textColor="#333333"
+                        android:textSize="13sp"
+                        android:background="#F2F2F2"
+                        android:layout_marginEnd="6dp"
+                        android:clickable="true"
+                        android:focusable="true"/>
+
+                    <TextView
+                        android:id="@+id/btnLoveQuality"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:text="Quality"
+                        android:gravity="center"
+                        android:textColor="#333333"
+                        android:textSize="13sp"
+                        android:background="#F2F2F2"
+                        android:clickable="true"
+                        android:focusable="true"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ── If NO: What's the reason? ── -->
+            <LinearLayout
+                android:id="@+id/reasonSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="What's the reason? 🤔"
+                    android:textColor="#333333"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/btnReasonPrice"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:text="Price"
+                        android:gravity="center"
+                        android:textColor="#333333"
+                        android:textSize="14sp"
+                        android:background="#F2F2F2"
+                        android:layout_marginEnd="8dp"
+                        android:clickable="true"
+                        android:focusable="true"/>
+
+                    <TextView
+                        android:id="@+id/btnReasonDesign"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:text="Design"
+                        android:gravity="center"
+                        android:textColor="#333333"
+                        android:textSize="14sp"
+                        android:background="#F2F2F2"
+                        android:clickable="true"
+                        android:focusable="true"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ── Thank you message (shown after feedback submitted) ── -->
+            <LinearLayout
+                android:id="@+id/feedbackDone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone"
+                android:paddingTop="12dp"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:id="@+id/tvFeedbackThanks"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Thanks for your feedback! 🎉"
+                    android:textColor="#E8622A"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:gravity="center"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Bottom spacing -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="24dp"/>
+
+    </LinearLayout>
+</ScrollView>

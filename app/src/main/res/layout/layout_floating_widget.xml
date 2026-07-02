@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <!-- ── STATE 1: Collapsed pill icon (shown by default) ── -->
+    <LinearLayout
+        android:id="@+id/collapsedView"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:background="@drawable/bg_teal_btn"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:elevation="10dp"
+        android:visibility="visible">
+
+        <ImageView
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/logo"
+            android:scaleType="fitCenter"/>
+
+    </LinearLayout>
+
+    <!-- ── STATE 2: Expanded rectangle panel ── -->
+    <LinearLayout
+        android:id="@+id/expandedView"
+        android:layout_width="280dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card_white"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:elevation="10dp"
+        android:visibility="gone">
+
+        <!-- Header row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="14dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/logo"
+                android:scaleType="fitCenter"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Virtual Try-On"
+                android:textColor="#111111"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="-0.01"/>
+
+            <!-- Close X button -->
+            <TextView
+                android:id="@+id/btnClose"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="✕"
+                android:textColor="#AAAAAA"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/bg_input"/>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EBEBEB"
+            android:layout_marginBottom="14dp"/>
+
+        <!-- Photos row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="14dp">
+
+            <!-- Captured garment -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ITEM"
+                    android:textColor="#111111"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.2"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="From Amazon"
+                    android:textColor="#AAAAAA"
+                    android:textSize="9sp"/>
+            </LinearLayout>
+
+            <!-- User photo -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="80dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:layout_marginStart="8dp">
+
+                <ImageView
+                    android:id="@+id/ivUserPhoto"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_violet_rounded_full"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/logo"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Your photo"
+                    android:textColor="#AAAAAA"
+                    android:textSize="9sp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Generate button -->
+        <Button
+            android:id="@+id/btnGenerate"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:text="Generate Try-On"
+            android:textColor="#ffffff"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.03"
+            android:background="@drawable/bg_teal_btn"/>
+
+    </LinearLayout>
+
+</FrameLayout>
