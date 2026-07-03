@@ -99,18 +99,12 @@ class OtpActivity : BaseActivity() {
     }
 
     private fun saveAndProceed(uid: String, name: String, contact: String) {
-        if (isRegister) {
-            db.collection("users").document(uid).set(
-                hashMapOf(
-                    "name"      to name,
-                    "contact"   to contact,
-                    "createdAt" to System.currentTimeMillis()
-                )
-            )
+        AuthHelper.ensureUserDoc(uid, name, contact) { isNew ->
+            Toast.makeText(this@OtpActivity, "✅ Account verified!", Toast.LENGTH_SHORT).show()
+            if (isNew) startActivity(Intent(this@OtpActivity, OnboardingActivity::class.java))
+            else startActivity(Intent(this@OtpActivity, MainActivity::class.java))
+            finishAffinity()
         }
-        Toast.makeText(this, "✅ Account verified!", Toast.LENGTH_SHORT).show()
-        startActivity(Intent(this, OnboardingActivity::class.java))
-        finishAffinity()
     }
 
     private fun startResendTimer(tvResend: TextView) {

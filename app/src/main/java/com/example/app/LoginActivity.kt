@@ -162,16 +162,11 @@ class LoginActivity : BaseActivity() {
                         val name  = result.user?.displayName ?: ""
                         val email = result.user?.email ?: ""
 
-                        if (result.additionalUserInfo?.isNewUser == true) {
-                            db.collection("users").document(uid).set(
-                                hashMapOf(
-                                    "name"      to name,
-                                    "contact"   to email,
-                                    "createdAt" to System.currentTimeMillis()
-                                )
-                            )
+                        AuthHelper.ensureUserDoc(uid, name, email) { isNew ->
+                            if (isNew) startActivity(Intent(this@LoginActivity, OnboardingActivity::class.java))
+                            else startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                            finish()
                         }
-                        goToMain()
                     }
                     .addOnFailureListener {
                         Toast.makeText(this, "❌ Google sign-in failed: ${it.message}", Toast.LENGTH_LONG).show()
@@ -184,7 +179,7 @@ class LoginActivity : BaseActivity() {
     }
 
     private fun goToMain() {
-        startActivity(Intent(this, OnboardingActivity::class.java))
+        startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 }

@@ -81,6 +81,19 @@
             android:taskAffinity=""
             android:launchMode="singleInstance"/>
 
+        <activity android:name=".SubscriptionActivity" android:exported="false"/>
+
+        <activity android:name=".PaymentActivity" android:exported="false"/>
+
+        <activity android:name="com.razorpay.CheckoutActivity"
+            android:theme="@style/CheckoutTheme"
+            android:exported="true"
+            tools:replace="android:exported"/>
+
+        <meta-data
+            android:name="com.razorpay.ApiKey"
+            android:value="rzp_test_T8yEe5ogTTdnwP"/>
+
         <activity
             android:name=".PhoneAuthActivity"
             android:exported="false"

@@ -61,11 +61,14 @@ class PhoneAuthActivity : BaseActivity() {
             .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                    // Auto-verification (rare on real devices)
                     auth.signInWithCredential(credential)
-                        .addOnSuccessListener {
-                            startActivity(Intent(this@PhoneAuthActivity, OnboardingActivity::class.java))
-                            finish()
+                        .addOnSuccessListener { result ->
+                            val uid = result.user?.uid ?: return@addOnSuccessListener
+                            AuthHelper.ensureUserDoc(uid, "", phoneNumber) { isNew ->
+                                if (isNew) startActivity(Intent(this@PhoneAuthActivity, OnboardingActivity::class.java))
+                                else startActivity(Intent(this@PhoneAuthActivity, MainActivity::class.java))
+                                finish()
+                            }
                         }
                 }
 

@@ -4,22 +4,25 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.os.Bundle
+import android.view.Gravity
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.exifinterface.media.ExifInterface
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 import java.io.FileOutputStream
 
 class MainActivity : BaseActivity() {
 
     private lateinit var btnStart: Button
-
 
     private val pickImage = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -36,6 +39,42 @@ class MainActivity : BaseActivity() {
         btnStart = findViewById(R.id.btnStart)
 
         refreshProfilePhoto()
+
+        // ── Drawer + hamburger menu ──
+        val drawerLayout = findViewById<DrawerLayout>(R.id.drawerLayout)
+        val btnMenu = findViewById<ImageView>(R.id.btnMenu)
+        val tvWelcome = findViewById<TextView>(R.id.tvWelcome)
+
+        btnMenu.setOnClickListener {
+            drawerLayout.openDrawer(Gravity.START)
+        }
+
+        // ── Fetch name from Firestore, show welcome msg ──
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            FirebaseFirestore.getInstance().collection("users").document(uid)
+                .get()
+                .addOnSuccessListener { doc ->
+                    val name = doc.getString("name") ?: ""
+                    tvWelcome.text = if (name.isNotEmpty()) "Welcome, $name" else "Welcome"
+                }
+        }
+
+        // ── Drawer nav clicks ──
+        findViewById<LinearLayout>(R.id.drawerAccountSettings).setOnClickListener {
+            drawerLayout.closeDrawer(Gravity.START)
+            // TODO: startActivity(Intent(this, AccountSettingsActivity::class.java))
+        }
+
+        findViewById<LinearLayout>(R.id.drawerSubscription).setOnClickListener {
+            drawerLayout.closeDrawer(Gravity.START)
+            startActivity(Intent(this, SubscriptionActivity::class.java))
+        }
+
+        findViewById<LinearLayout>(R.id.drawerHelpSupport).setOnClickListener {
+            drawerLayout.closeDrawer(Gravity.START)
+            // TODO: startActivity(Intent(this, HelpSupportActivity::class.java))
+        }
 
         findViewById<LinearLayout>(R.id.llProfileRow).setOnClickListener {
             pickImage.launch("image/*")
@@ -77,7 +116,6 @@ class MainActivity : BaseActivity() {
                 return
             }
 
-            // Fix EXIF orientation
             val exifStream = contentResolver.openInputStream(uri)
             val exif = ExifInterface(exifStream!!)
             exifStream.close()
@@ -136,7 +174,6 @@ class MainActivity : BaseActivity() {
         btnStart.text = if (isRunning) "Stop Try-On" else "Start Try-On"
     }
 
-    // ── Notification permission — Android 13+ only ──
     private fun askNotificationPermission(onGranted: () -> Unit) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
@@ -183,7 +220,6 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    // ── Start / Stop service ──
     private fun handleStartStop() {
         val accService = TryVueAccessibilityService.instance
         val floatingService = FloatingService.instance
@@ -202,7 +238,6 @@ class MainActivity : BaseActivity() {
                 return
             }
 
-            // Step 1 — check battery optimisation
             val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
             if (!pm.isIgnoringBatteryOptimizations(packageName)) {
                 android.app.AlertDialog.Builder(
@@ -238,7 +273,6 @@ class MainActivity : BaseActivity() {
                 return
             }
 
-            // Step 2 — battery whitelisted, check notification permission then start
             askNotificationPermission {
                 startForegroundService(Intent(this, FloatingService::class.java))
                 Toast.makeText(

@@ -49,6 +49,17 @@ class FloatingService : Service() {
     private var currentProductBrand: String = ""
     private var currentProductName: String = ""
 
+    private val planDisplay = mapOf(
+        "test"           to Triple("Test Plan", "5 tryons", "No expiry"),
+        "Free Credits"   to Triple("Free Credits", "5 tryons", "No expiry"),
+        "1tryon"    to Triple("Starter", "1 tryon", "Valid 30 days"),
+        "5tryon"    to Triple("Basic", "5 tryons", "Valid 30 days"),
+        "10tryon"   to Triple("Popular", "10 tryons", "Valid 30 days"),
+        "50tryon"   to Triple("Value", "50 tryons", "Valid 30 days"),
+        "100tryon"  to Triple("Pro", "100 tryons", "Valid 60 days"),
+        "1000tryon" to Triple("Ultimate", "1000 tryons", "Valid 1 year")
+    )
+
 
 
     // WakeLock
@@ -420,6 +431,78 @@ class FloatingService : Service() {
         val ivUserPhoto = view.findViewById<ImageView>(R.id.ivUserPhoto)
         val tvUserPhotoLabel = view.findViewById<TextView>(R.id.tvUserPhotoLabel)
 
+        // ── Fetch current plan + remaining tryons ──
+        var currentTryonsRemaining = 0
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        val btnGenerate = view.findViewById<Button>(R.id.btnGenerate)
+
+        // Insert plan/credits row (modern card style) above tvSelectedLabel
+        val planContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = (8 * resources.displayMetrics.density).toInt()
+            }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#F0F9F8"))
+                cornerRadius = 8 * resources.displayMetrics.density
+            }
+            setPadding(
+                (12 * resources.displayMetrics.density).toInt(),
+                (10 * resources.displayMetrics.density).toInt(),
+                (12 * resources.displayMetrics.density).toInt(),
+                (10 * resources.displayMetrics.density).toInt()
+            )
+        }
+
+        val planTextView = TextView(this).apply {
+            text = "Loading plan..."
+            setTextColor(Color.parseColor("#10B981"))
+            textSize = 12f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+
+        val trySonCountView = TextView(this).apply {
+            text = "Remaining try-ons: Loading..."
+            setTextColor(Color.parseColor("#6B7280"))
+            textSize = 11f
+            setPadding(0, (4 * resources.displayMetrics.density).toInt(), 0, 0)
+        }
+
+        planContainer.addView(planTextView)
+        planContainer.addView(trySonCountView)
+
+        val parentOfLabel = tvSelectedLabel.parent as? ViewGroup
+        val labelIndex = parentOfLabel?.indexOfChild(tvSelectedLabel) ?: -1
+        if (parentOfLabel != null && labelIndex >= 0) {
+            parentOfLabel.addView(planContainer, labelIndex)
+        }
+
+        fun updateButtonForCredits() {
+            if (currentTryonsRemaining <= 0) {
+                btnGenerate.text = "Upgrade • 0 left"
+                btnGenerate.isEnabled = true
+            } else {
+                btnGenerate.text = "Generate Try-On • $currentTryonsRemaining left"
+                btnGenerate.isEnabled = true
+            }
+        }
+
+        if (uid != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                .collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    currentTryonsRemaining = (doc.getLong("tryonsRemaining") ?: 0).toInt()
+                    val planId = doc.getString("tryonPlan") ?: "Test Plan"
+                    val displayName = planDisplay[planId]?.first ?: planId
+                    planTextView.text = displayName
+                    trySonCountView.text = "$currentTryonsRemaining try-ons remaining"
+                    updateButtonForCredits()
+                }
+        }
+
         // Load original profile photo
         val prefs = getSharedPreferences("Dontry", MODE_PRIVATE)
         val originalPhotoPath = prefs.getString("profile_photo_path", null)
@@ -621,8 +704,19 @@ class FloatingService : Service() {
 
 
         // Generate button
-        view.findViewById<Button>(R.id.btnGenerate).setOnClickListener {
+        btnGenerate.setOnClickListener {
             if (isCapturing) return@setOnClickListener
+
+            // If no credits, navigate to subscription
+            if (currentTryonsRemaining <= 0) {
+                hidePanel()
+                val intent = Intent(this, SubscriptionActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(intent)
+                return@setOnClickListener
+            }
+
             isCapturing = true
             (it as Button).isEnabled = false
             hidePanel()

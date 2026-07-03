@@ -204,11 +204,14 @@ class RegisterActivity : BaseActivity() {
 
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                     // Auto-verified (rare on real devices) — sign in directly
-                    auth.signInWithCredential(credential)
+                            auth.signInWithCredential(credential)
                         .addOnSuccessListener { result ->
                             val uid = result.user?.uid ?: return@addOnSuccessListener
-                            saveUserToFirestore(uid, pendingName, phone)
-                            goToMain()
+                            AuthHelper.ensureUserDoc(uid, pendingName, phone) { isNew ->
+                                if (isNew) startActivity(Intent(this@RegisterActivity, OnboardingActivity::class.java))
+                                else startActivity(Intent(this@RegisterActivity, MainActivity::class.java))
+                                finish()
+                            }
                         }
                 }
 
@@ -256,8 +259,11 @@ class RegisterActivity : BaseActivity() {
                         val uid   = result.user?.uid ?: return@addOnSuccessListener
                         val name  = result.user?.displayName ?: ""
                         val email = result.user?.email ?: ""
-                        saveUserToFirestore(uid, name, email)
-                        goToMain()
+                        AuthHelper.ensureUserDoc(uid, name, email) { isNew ->
+                            if (isNew) startActivity(Intent(this@RegisterActivity, OnboardingActivity::class.java))
+                            else startActivity(Intent(this@RegisterActivity, MainActivity::class.java))
+                            finish()
+                        }
                     }
                     .addOnFailureListener {
                         Toast.makeText(this, "❌ Google sign-in failed: ${it.message}", Toast.LENGTH_LONG).show()
@@ -273,18 +279,10 @@ class RegisterActivity : BaseActivity() {
     }
 
 
-    fun saveUserToFirestore(uid: String, name: String, contact: String) {
-        db.collection("users").document(uid).set(
-            hashMapOf(
-                "name"      to name,
-                "contact"   to contact,
-                "createdAt" to System.currentTimeMillis()
-            )
-        )
-    }
 
-    private fun goToMain() {
-        startActivity(Intent(this, OnboardingActivity::class.java))
+    private fun goToNext(isNew: Boolean) {
+        if (isNew) startActivity(Intent(this, OnboardingActivity::class.java))
+        else startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 }

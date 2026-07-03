@@ -13,10 +13,12 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.tasks.await
+import com.google.firebase.auth.FirebaseAuth
 
 class TryOnManager(private val context: Context) {
 
-    private val TRYON_API_URL = "https://web-production-ca122.up.railway.app"
+    private val TRYON_API_URL = "https://supercriminally-ununified-arnoldo.ngrok-free.dev"
     private val TRYON_HOST = "web-production-ca122.up.railway.app"
 
     private var cachedIp: String? = null
@@ -35,9 +37,18 @@ class TryOnManager(private val context: Context) {
         }
     }
 
-    private fun getFirebaseUid(): String {
-        return com.google.firebase.auth.FirebaseAuth.getInstance()
-            .currentUser?.uid ?: "anonymous"
+
+
+    private suspend fun getFirebaseToken(): String? {
+        return try {
+            FirebaseAuth.getInstance().currentUser
+                ?.getIdToken(false)
+                ?.await()
+                ?.token
+        } catch (e: Exception) {
+            Log.w("Dontry", "Token fetch failed: ${e.message}")
+            null
+        }
     }
 
     private fun resolveViaGoogleDoh(hostname: String): String? {
@@ -213,9 +224,15 @@ class TryOnManager(private val context: Context) {
                     .addFormDataPart("text_nodes", textNodesJoined)
                     .build()
 
+                val token = getFirebaseToken()
+                    ?: return@withContext ValidationResult(
+                        GeminiResult.Error("🔒 Please log in again to continue."),
+                        null, "", "", ""
+                    )
+
                 val request = Request.Builder()
                     .url("$TRYON_API_URL/validate")
-                    .header("X-User-ID", getFirebaseUid())
+                    .header("Authorization", "Bearer $token")
                     .header("X-Device-Model", android.os.Build.MODEL)
                     .header("X-Device-Manufacturer", android.os.Build.MANUFACTURER)
                     .post(requestBody)
@@ -340,9 +357,12 @@ class TryOnManager(private val context: Context) {
                     bodyBuilder.addFormDataPart("session_id", sessionId)
                 }
 
+                val token = getFirebaseToken()
+                    ?: return@withContext TryOnResult.Error("🔒 Please log in again to continue.")
+
                 val request = Request.Builder()
                     .url("$TRYON_API_URL/try-on")
-                    .header("X-User-ID", getFirebaseUid())
+                    .header("Authorization", "Bearer $token")
                     .post(bodyBuilder.build())
                     .build()
 
@@ -355,7 +375,7 @@ class TryOnManager(private val context: Context) {
                         val json = JSONObject(responseBody)
                         val requestId = json.getString("request_id")
                         onProgress("Processing try-on...")
-                        pollForResult(requestId, onProgress)
+                        pollForResult(requestId, token, onProgress)
                     }
                     400 -> TryOnResult.Error(
                         "🖼️ The product image wasn't clear enough.\nTry scrolling to the main front photo of the clothing and try again."
@@ -395,6 +415,7 @@ class TryOnManager(private val context: Context) {
 
     private suspend fun pollForResult(
         requestId: String,
+        token: String,
         onProgress: (String) -> Unit
     ): TryOnResult {
         var pollCount = 0
@@ -411,6 +432,7 @@ class TryOnManager(private val context: Context) {
 
                 val request = Request.Builder()
                     .url("$TRYON_API_URL/try-on/status/$requestId")
+                    .header("Authorization", "Bearer $token")
                     .get()
                     .build()
 
