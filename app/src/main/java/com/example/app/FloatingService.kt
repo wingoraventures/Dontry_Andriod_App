@@ -773,10 +773,12 @@ class FloatingService : Service() {
                     when (val geminiResult = validation.geminiResult) {
                         is GeminiResult.NoClothing -> {
                             if (!screenshot!!.isRecycled) screenshot!!.recycle()
-                            showOverlayToast(
-                                "👕 This doesn't look like a clothing product.\nOpen an Amazon clothing item page and tap Try On.",
-                                5000L
-                            )
+                            val message = if (validation.reason.isNotBlank()) {
+                                "🚫 ${validation.reason}"
+                            } else {
+                                "👕 This doesn't look like a clothing product.\nOpen an Amazon clothing item page and tap Try On."
+                            }
+                            showOverlayToast(message, 5000L)
                             isCapturing = false
                             pinIcon(5000)
                             showNormalIcon()

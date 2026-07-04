@@ -260,6 +260,7 @@ class TryOnManager(private val context: Context) {
                 val productTitle  = json.optString("product_title", "")
                 val productBrand  = json.optString("product_brand", "")
                 val garmentClass  = json.optString("garment_class", "")
+                val reason        = json.optString("reason", "")
                 val validateTimeMs = json.optInt("validate_time_ms", 0)
 
                 Log.d("Dontry", "Validation: [$result] title=$productTitle brand=$productBrand class=$garmentClass session=$sessionId")
@@ -276,7 +277,7 @@ class TryOnManager(private val context: Context) {
                     }
                 }
 
-                ValidationResult(geminiResult, sessionId, productTitle, productBrand, garmentClass, validateTimeMs)
+                ValidationResult(geminiResult, sessionId, productTitle, productBrand, garmentClass, validateTimeMs, reason)
 
             } catch (e: java.net.SocketTimeoutException) {
                 ValidationResult(GeminiResult.Error("⏱️ Server took too long to respond.\nPlease try again."), null, "", "", "")
@@ -506,7 +507,8 @@ data class ValidationResult(
     val productTitle: String,
     val productBrand: String,
     val garmentClass: String,
-    val validateTimeMs: Int = 0
+    val validateTimeMs: Int = 0,
+    val reason: String = ""
 )
 
 sealed class TryOnResult {
