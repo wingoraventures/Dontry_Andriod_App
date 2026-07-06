@@ -73,6 +73,35 @@
             android:textSize="12sp"
             android:layout_marginBottom="16dp"/>
 
+
+        <!-- Auto-capture info box -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/bg_capture_box"
+            android:padding="16dp"
+            android:layout_marginBottom="18dp">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_shirt_outline"
+                android:background="@drawable/bg_shirt_icon_frame"
+                android:layout_marginEnd="14dp"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="We'll automatically capture the item from this screen when you generate your try-on."
+                android:textColor="#4B5563"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"/>
+        </LinearLayout>
+
         <!-- Divider -->
         <View
             android:layout_width="match_parent"
@@ -114,7 +143,6 @@
                     android:gravity="center"
                     android:layout_marginEnd="10dp">
 
-                    <!-- Photo frame -->
                     <FrameLayout
                         android:layout_width="64dp"
                         android:layout_height="64dp"
@@ -129,7 +157,6 @@
                             android:clipToOutline="true"
                             android:outlineProvider="background"/>
 
-                        <!-- Selected indicator -->
                         <View
                             android:id="@+id/vOriginalSelected"
                             android:layout_width="64dp"
@@ -137,7 +164,6 @@
                             android:background="@drawable/bg_selected_border"
                             android:visibility="visible"/>
 
-                        <!-- Tick when selected -->
                         <TextView
                             android:id="@+id/tvOriginalTick"
                             android:layout_width="18dp"
@@ -170,7 +196,7 @@
             </LinearLayout>
         </HorizontalScrollView>
 
-        <!-- Selected label -->
+        <!-- Selected label (planContainer gets inserted above this by Kotlin) -->
         <TextView
             android:id="@+id/tvSelectedLabel"
             android:layout_width="wrap_content"
@@ -187,82 +213,6 @@
             android:layout_height="1dp"
             android:background="#eeeeee"
             android:layout_marginBottom="16dp"/>
-
-        <!-- Garment + Arrow + Photo row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="20dp">
-
-            <!-- Captured garment box -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="80dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_input"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginEnd="8dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="GARMENT"
-                    android:textColor="#2E9E8A"
-                    android:textSize="9sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.2"
-                    android:layout_marginBottom="4dp"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Captured from screen"
-                    android:textColor="#bbbbbb"
-                    android:textSize="10sp"
-                    android:gravity="center"/>
-            </LinearLayout>
-
-            <!-- Arrow -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="→"
-                android:textColor="#E8622A"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"/>
-
-            <!-- Selected user photo preview -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="80dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_input"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginStart="8dp">
-
-                <ImageView
-                    android:id="@+id/ivUserPhoto"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:background="@drawable/bg_avatar_circle"
-                    android:scaleType="centerCrop"
-                    android:layout_marginBottom="4dp"/>
-
-                <TextView
-                    android:id="@+id/tvUserPhotoLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Your photo"
-                    android:textColor="#bbbbbb"
-                    android:textSize="9sp"/>
-            </LinearLayout>
-        </LinearLayout>
 
         <!-- Generate button -->
         <Button

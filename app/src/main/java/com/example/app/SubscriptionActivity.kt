@@ -50,7 +50,9 @@ class SubscriptionActivity : BaseActivity() {
             .get()
             .addOnSuccessListener { doc ->
                 val count = doc.getLong("tryonsRemaining") ?: 0
+                val total = doc.getLong("tryonsTotal") ?: count
                 findViewById<TextView>(R.id.tvCurrentTryons).text = count.toString()
+                findViewById<TextView>(R.id.tvTotalTryons).text = "of $total total"
 
                 // ── Active plan card ──
                 val activePlan = doc.getString("tryonPlan")
@@ -89,7 +91,7 @@ class SubscriptionActivity : BaseActivity() {
         user.getIdToken(true).addOnSuccessListener { result ->
             val token = result.token
             val request = Request.Builder()
-                .url(" https://supercriminally-ununified-arnoldo.ngrok-free.dev/payment/history")
+                .url("${Constants.API_BASE_URL}/payment/history")
                 .addHeader("Authorization", "Bearer $token")
                 .get()
                 .build()

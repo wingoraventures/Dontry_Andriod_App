@@ -18,7 +18,7 @@ import com.google.firebase.auth.FirebaseAuth
 
 class TryOnManager(private val context: Context) {
 
-    private val TRYON_API_URL = "https://supercriminally-ununified-arnoldo.ngrok-free.dev"
+    private val TRYON_API_URL = Constants.API_BASE_URL
     private val TRYON_HOST = "web-production-ca122.up.railway.app"
 
     private var cachedIp: String? = null

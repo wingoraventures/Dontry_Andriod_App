@@ -92,7 +92,11 @@ class MainActivity : BaseActivity() {
             getSharedPreferences("Dontry", MODE_PRIVATE).edit()
                 .remove("selected_look_id")
                 .remove("selected_look_path")
+                .remove("profile_photo_path")
                 .apply()
+
+            File(filesDir, "profile_photo.jpg").delete()
+
             stopService(Intent(this, FloatingService::class.java))
 
             startActivity(Intent(this, LoginActivity::class.java))
@@ -104,7 +108,7 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    // ── New image handler — safe on all Android versions ──
+
     private fun handleSelectedImage(uri: android.net.Uri) {
         try {
             val inputStream = contentResolver.openInputStream(uri)
@@ -142,6 +146,15 @@ class MainActivity : BaseActivity() {
                 .putString("profile_photo_path", file.absolutePath)
                 .apply()
 
+            // ── NEW: sync updated photo to Supabase in background ──
+            ProfilePhotoUploader.upload(file) { success, url ->
+                if (success) {
+                    android.util.Log.d("MainActivity", "Profile photo synced: $url")
+                } else {
+                    android.util.Log.w("MainActivity", "Profile photo sync failed, local cache only")
+                }
+            }
+
             refreshProfilePhoto()
             Toast.makeText(this, "✅ Photo updated!", Toast.LENGTH_SHORT).show()
 
@@ -160,13 +173,60 @@ class MainActivity : BaseActivity() {
         val prefs = getSharedPreferences("Dontry", MODE_PRIVATE)
         val photoPath = prefs.getString("profile_photo_path", null)
         val iv = findViewById<ImageView>(R.id.ivUserAvatar)
-        photoPath?.let {
-            val file = File(it)
-            if (file.exists()) {
-                iv.setImageBitmap(BitmapFactory.decodeFile(it))
-                iv.scaleType = ImageView.ScaleType.CENTER_CROP
-            }
+
+        val localFile = photoPath?.let { File(it) }
+        if (localFile != null && localFile.exists()) {
+            // local file good — show it (existing behavior, unchanged)
+            iv.setImageBitmap(BitmapFactory.decodeFile(photoPath))
+            iv.scaleType = ImageView.ScaleType.CENTER_CROP
+            return
         }
+
+
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                val remoteUrl = doc.getString("profilePhotoUrl")
+                if (!remoteUrl.isNullOrEmpty()) {
+                    val destFile = File(filesDir, "profile_photo.jpg")
+                    downloadProfilePhoto(remoteUrl, destFile) { success ->
+                        if (success) {
+                            getSharedPreferences("Dontry", MODE_PRIVATE).edit()
+                                .putString("profile_photo_path", destFile.absolutePath)
+                                .apply()
+                            iv.setImageBitmap(BitmapFactory.decodeFile(destFile.absolutePath))
+                            iv.scaleType = ImageView.ScaleType.CENTER_CROP
+                        }
+
+                    }
+                }
+            }
+    }
+
+
+    private fun downloadProfilePhoto(url: String, destFile: File, onDone: (Boolean) -> Unit) {
+        Thread {
+            try {
+                val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                connection.connect()
+
+                if (connection.responseCode == 200) {
+                    connection.inputStream.use { input ->
+                        FileOutputStream(destFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    runOnUiThread { onDone(true) }
+                } else {
+                    runOnUiThread { onDone(false) }
+                }
+            } catch (e: Exception) {
+                runOnUiThread { onDone(false) }
+            }
+        }.start()
     }
 
     private fun updateButtonState() {

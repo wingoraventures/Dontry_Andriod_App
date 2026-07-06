@@ -22,7 +22,7 @@ import kotlinx.coroutines.tasks.await
 
 class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
 
-    private val TRYON_API_URL = "https://supercriminally-ununified-arnoldo.ngrok-free.dev"
+    private val TRYON_API_URL = Constants.API_BASE_URL
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)

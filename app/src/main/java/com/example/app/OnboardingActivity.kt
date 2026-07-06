@@ -12,8 +12,13 @@ import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 
 class OnboardingActivity : BaseActivity() {
 
@@ -34,6 +39,38 @@ class OnboardingActivity : BaseActivity() {
             return
         }
 
+
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid != null) {
+            FirebaseFirestore.getInstance().collection("users").document(uid)
+                .get()
+                .addOnSuccessListener { doc ->
+                    val remoteUrl = doc.getString("profilePhotoUrl")
+                    if (!remoteUrl.isNullOrEmpty()) {
+                        downloadProfilePhoto(remoteUrl, photoFile) { success ->
+                            if (success) {
+                                getSharedPreferences("Dontry", MODE_PRIVATE).edit()
+                                    .putString("profile_photo_path", photoFile.absolutePath)
+                                    .apply()
+                                startActivity(Intent(this, MainActivity::class.java))
+                                finish()
+                            } else {
+                                showOnboardingUI()
+                            }
+                        }
+                    } else {
+                        showOnboardingUI()
+                    }
+                }
+                .addOnFailureListener {
+                    showOnboardingUI()
+                }
+        } else {
+            showOnboardingUI()
+        }
+    }
+
+    private fun showOnboardingUI() {
         setContentView(R.layout.activity_onboarding)
         applyWindowInsets(findViewById(android.R.id.content))
 
@@ -49,6 +86,31 @@ class OnboardingActivity : BaseActivity() {
         }
     }
 
+
+    private fun downloadProfilePhoto(url: String, destFile: File, onDone: (Boolean) -> Unit) {
+        Thread {
+            try {
+                val connection = URL(url).openConnection() as HttpURLConnection
+                connection.connectTimeout = 8000
+                connection.readTimeout = 8000
+                connection.connect()
+
+                if (connection.responseCode == 200) {
+                    connection.inputStream.use { input ->
+                        FileOutputStream(destFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    runOnUiThread { onDone(true) }
+                } else {
+                    runOnUiThread { onDone(false) }
+                }
+            } catch (e: IOException) {
+                runOnUiThread { onDone(false) }
+            }
+        }.start()
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
@@ -61,6 +123,15 @@ class OnboardingActivity : BaseActivity() {
                         .edit()
                         .putString("profile_photo_path", savedPath)
                         .apply()
+
+                    // ── sync photo to Supabase in background ──
+                    ProfilePhotoUploader.upload(File(savedPath)) { success, url ->
+                        if (success) {
+                            android.util.Log.d("Onboarding", "Profile photo synced: $url")
+                        } else {
+                            android.util.Log.w("Onboarding", "Profile photo sync failed, local cache only")
+                        }
+                    }
 
                     ivProfile.setImageBitmap(BitmapFactory.decodeFile(savedPath))
                     ivProfile.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -84,7 +155,6 @@ class OnboardingActivity : BaseActivity() {
 
     private fun copyImageToAppStorage(uri: Uri): String? {
         return try {
-            // 1. Read EXIF — safe null check
             val orientation = contentResolver.openInputStream(uri)?.use { stream ->
                 val exif = ExifInterface(stream)
                 exif.getAttributeInt(
@@ -93,12 +163,10 @@ class OnboardingActivity : BaseActivity() {
                 )
             } ?: ExifInterface.ORIENTATION_NORMAL
 
-            // 2. Decode pixels — safe null check
             val bitmap = contentResolver.openInputStream(uri)?.use { stream ->
                 BitmapFactory.decodeStream(stream)
-            } ?: return null  // corrupt image → exit safely, no crash
+            } ?: return null
 
-            // 3. Rotate
             val matrix = Matrix()
             when (orientation) {
                 ExifInterface.ORIENTATION_ROTATE_90  -> matrix.postRotate(90f)
@@ -109,7 +177,6 @@ class OnboardingActivity : BaseActivity() {
                 bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
             )
 
-            // 4. Scale
             val maxSize = 1024
             val scaled = if (rotated.width > maxSize || rotated.height > maxSize) {
                 val ratio = minOf(
@@ -124,7 +191,6 @@ class OnboardingActivity : BaseActivity() {
                 )
             } else rotated
 
-            // 5. Save to temp first → rename on success
             val tempFile = File(filesDir, "profile_photo_temp.jpg")
             FileOutputStream(tempFile).use { out ->
                 scaled.compress(Bitmap.CompressFormat.JPEG, 90, out)

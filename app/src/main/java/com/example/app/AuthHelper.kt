@@ -24,7 +24,7 @@ object AuthHelper {
                             "name" to name,
                             "contact" to contact,
                             "createdAt" to System.currentTimeMillis(),
-                            "tryonsRemaining" to 5,
+                            "tryonsRemaining" to 0,
                             "tryonPlan" to "Free Credits",
                             "planValidUntil" to null,
                             "hasUsedTestTryons" to false,

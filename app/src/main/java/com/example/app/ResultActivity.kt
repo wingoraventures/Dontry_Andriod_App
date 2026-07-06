@@ -208,7 +208,7 @@ class ResultActivity : BaseActivity() {
                     "application/json".toMediaTypeOrNull(), json.toString()
                 )
                 val request = okhttp3.Request.Builder()
-                    .url("https://web-production-ca122.up.railway.app/feedback")
+                    .url("${Constants.API_BASE_URL}/feedback")
                     .post(body)
                     .build()
                 client.newCall(request).execute().use { response ->

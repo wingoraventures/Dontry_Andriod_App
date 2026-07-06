@@ -428,8 +428,7 @@ class FloatingService : Service() {
         val tvOriginalTick = view.findViewById<TextView>(R.id.tvOriginalTick)
         val llSavedLooks = view.findViewById<LinearLayout>(R.id.llSavedLooks)
         val tvSelectedLabel = view.findViewById<TextView>(R.id.tvSelectedLabel)
-        val ivUserPhoto = view.findViewById<ImageView>(R.id.ivUserPhoto)
-        val tvUserPhotoLabel = view.findViewById<TextView>(R.id.tvUserPhotoLabel)
+
 
         // ── Fetch current plan + remaining tryons ──
         var currentTryonsRemaining = 0
@@ -443,36 +442,79 @@ class FloatingService : Service() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = (8 * resources.displayMetrics.density).toInt()
+                bottomMargin = (10 * resources.displayMetrics.density).toInt()
             }
             background = android.graphics.drawable.GradientDrawable().apply {
                 setColor(Color.parseColor("#F0F9F8"))
-                cornerRadius = 8 * resources.displayMetrics.density
+                cornerRadius = 12 * resources.displayMetrics.density
             }
             setPadding(
-                (12 * resources.displayMetrics.density).toInt(),
-                (10 * resources.displayMetrics.density).toInt(),
-                (12 * resources.displayMetrics.density).toInt(),
-                (10 * resources.displayMetrics.density).toInt()
+                (18 * resources.displayMetrics.density).toInt(),
+                (16 * resources.displayMetrics.density).toInt(),
+                (18 * resources.displayMetrics.density).toInt(),
+                (16 * resources.displayMetrics.density).toInt()
             )
         }
 
-        val planTextView = TextView(this).apply {
-            text = "Loading plan..."
-            setTextColor(Color.parseColor("#10B981"))
-            textSize = 12f
+        val tryonsHeaderRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val tvTryonsLabel = TextView(this).apply {
+            text = "Try-ons remaining"
+            setTextColor(Color.parseColor("#374151"))
+            textSize = 14f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val tvTryonsCount = TextView(this).apply {
+            text = "0 / 0"
+            setTextColor(Color.parseColor("#111827"))
+            textSize = 14f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
         }
 
-        val trySonCountView = TextView(this).apply {
-            text = "Remaining try-ons: Loading..."
-            setTextColor(Color.parseColor("#6B7280"))
-            textSize = 11f
-            setPadding(0, (4 * resources.displayMetrics.density).toInt(), 0, 0)
+        tryonsHeaderRow.addView(tvTryonsLabel)
+        tryonsHeaderRow.addView(tvTryonsCount)
+
+        val progressBarBg = LinearLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (10 * resources.displayMetrics.density).toInt()
+            ).apply { topMargin = (10 * resources.displayMetrics.density).toInt() }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#E5E7EB"))
+                cornerRadius = 5 * resources.displayMetrics.density
+            }
         }
 
+        val progressBarFill = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                orientation = android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT
+                colors = intArrayOf(Color.parseColor("#2E9E8A"), Color.parseColor("#E8622A"))
+                cornerRadius = 5 * resources.displayMetrics.density
+            }
+        }
+        progressBarBg.addView(progressBarFill)
+
+        val planTextView = TextView(this).apply {
+            text = "👑 Loading plan..."
+            setTextColor(Color.parseColor("#10B981"))
+            textSize = 14f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding(0, (10 * resources.displayMetrics.density).toInt(), 0, 0)
+        }
+
+        planContainer.addView(tryonsHeaderRow)
+        planContainer.addView(progressBarBg)
         planContainer.addView(planTextView)
-        planContainer.addView(trySonCountView)
+
+
 
         val parentOfLabel = tvSelectedLabel.parent as? ViewGroup
         val labelIndex = parentOfLabel?.indexOfChild(tvSelectedLabel) ?: -1
@@ -496,9 +538,27 @@ class FloatingService : Service() {
                 .addOnSuccessListener { doc ->
                     currentTryonsRemaining = (doc.getLong("tryonsRemaining") ?: 0).toInt()
                     val planId = doc.getString("tryonPlan") ?: "Test Plan"
+                    val totalTryons = (doc.getLong("tryonsTotal") ?: currentTryonsRemaining.toLong()).toInt()
                     val displayName = planDisplay[planId]?.first ?: planId
-                    planTextView.text = displayName
-                    trySonCountView.text = "$currentTryonsRemaining try-ons remaining"
+
+                    tvTryonsCount.text = "$currentTryonsRemaining / $totalTryons"
+                    planTextView.text = "👑 Plan: $displayName"
+
+                    val fillWeight = if (totalTryons > 0) {
+                        (currentTryonsRemaining.toFloat() / totalTryons).coerceIn(0f, 1f)
+                    } else 0f
+                    progressBarBg.removeAllViews()
+                    progressBarBg.addView(progressBarFill.apply {
+                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                            weight = fillWeight
+                        }
+                    })
+                    progressBarBg.addView(View(this@FloatingService).apply {
+                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                            weight = 1f - fillWeight
+                        }
+                    })
+
                     updateButtonForCredits()
                 }
         }
@@ -527,25 +587,12 @@ class FloatingService : Service() {
             selectedLookId = selectedId
 
             if (selectedId == null) {
-                // Original selected
                 vOriginalSelected.visibility = View.VISIBLE
                 tvOriginalTick.visibility = View.VISIBLE
                 tvSelectedLabel.text = "Using: Original photo"
                 tvSelectedLabel.setTextColor(Color.parseColor("#2E9E8A"))
-
-                // Update main photo preview
-                originalPhotoPath?.let {
-                    if (java.io.File(it).exists()) {
-                        ivUserPhoto.setImageBitmap(BitmapFactory.decodeFile(it))
-                    }
-                }
-                tvUserPhotoLabel.text = "Original photo"
-
-                // Save to LooksManager
                 looksManager.clearSelectedLook()
-
             } else {
-                // A saved look selected
                 vOriginalSelected.visibility = View.INVISIBLE
                 tvOriginalTick.visibility = View.INVISIBLE
 
@@ -554,13 +601,6 @@ class FloatingService : Service() {
                 selectedLook?.let {
                     tvSelectedLabel.text = "Using: Saved look 👍"
                     tvSelectedLabel.setTextColor(Color.parseColor("#E8622A"))
-
-                    // Update main photo preview
-                    ivUserPhoto.setImageBitmap(BitmapFactory.decodeFile(it.filePath))
-                    ivUserPhoto.scaleType = ImageView.ScaleType.CENTER_CROP
-                    tvUserPhotoLabel.text = "Saved look"
-
-                    // Save to LooksManager
                     looksManager.selectLook(it)
                 }
             }
