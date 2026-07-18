@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">web-production-ca122.up.railway.app</domain>
+        <domain includeSubdomains="true">web-production-dba0c.up.railway.app</domain>
         <trust-anchors>
             <certificates src="system"/>
             <certificates src="user"/>

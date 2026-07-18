@@ -88,6 +88,16 @@ class SubscriptionActivity : BaseActivity() {
 
     private fun fetchPurchaseHistory() {
         val user = FirebaseAuth.getInstance().currentUser ?: return
+
+        // Show loading state immediately
+        val progressBar = findViewById<android.widget.ProgressBar>(R.id.progressPurchaseHistory)
+        val rv = findViewById<NonScrollableRecyclerView>(R.id.rvPurchaseHistory)
+        val emptyView = findViewById<TextView>(R.id.tvNoHistory)
+
+        progressBar.visibility = android.view.View.VISIBLE
+        rv.visibility = android.view.View.GONE
+        emptyView.visibility = android.view.View.GONE
+
         user.getIdToken(true).addOnSuccessListener { result ->
             val token = result.token
             val request = Request.Builder()
@@ -99,6 +109,7 @@ class SubscriptionActivity : BaseActivity() {
             OkHttpClient().newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
                     runOnUiThread {
+                        progressBar.visibility = android.view.View.GONE
                         Toast.makeText(this@SubscriptionActivity, "Failed to load history", Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -106,7 +117,10 @@ class SubscriptionActivity : BaseActivity() {
                 override fun onResponse(call: Call, response: Response) {
                     val body = response.body?.string() ?: return
                     val json = JSONObject(body)
-                    if (!json.optBoolean("success")) return
+                    if (!json.optBoolean("success")) {
+                        runOnUiThread { progressBar.visibility = android.view.View.GONE }
+                        return
+                    }
 
                     val arr = json.getJSONArray("history")
                     val list = mutableListOf<Purchase>()
@@ -123,8 +137,7 @@ class SubscriptionActivity : BaseActivity() {
                     }
 
                     runOnUiThread {
-                        val rv = findViewById<NonScrollableRecyclerView>(R.id.rvPurchaseHistory)
-                        val emptyView = findViewById<TextView>(R.id.tvNoHistory)
+                        progressBar.visibility = android.view.View.GONE
                         if (list.isEmpty()) {
                             rv.visibility = android.view.View.GONE
                             emptyView.visibility = android.view.View.VISIBLE
@@ -137,6 +150,11 @@ class SubscriptionActivity : BaseActivity() {
                     }
                 }
             })
+        }.addOnFailureListener {
+            runOnUiThread {
+                progressBar.visibility = android.view.View.GONE
+                Toast.makeText(this@SubscriptionActivity, "Failed to load history", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

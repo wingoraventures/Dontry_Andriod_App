@@ -484,6 +484,16 @@
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="12dp"/>
 
+            <ProgressBar
+                android:id="@+id/progressPurchaseHistory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp"
+                android:indeterminateTint="#0d9488"
+                android:visibility="gone"/>
+
             <com.dontry.app.NonScrollableRecyclerView
                 android:id="@+id/rvPurchaseHistory"
                 android:layout_width="match_parent"

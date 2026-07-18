@@ -1,39 +1,47 @@
 package com.dontry.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.TextPaint
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
 import android.util.Patterns
 import android.widget.*
 import androidx.core.content.ContextCompat
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
 import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.FirebaseException
 import com.google.firebase.auth.*
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import java.util.concurrent.TimeUnit
-import java.util.Properties
-import javax.mail.*
-import javax.mail.internet.*
-import kotlinx.coroutines.*
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.IOException
+import com.google.firebase.appcheck.FirebaseAppCheck
 
 class RegisterActivity : BaseActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private lateinit var googleSignInClient: GoogleSignInClient
+    private val client = OkHttpClient()
 
     private val RC_GOOGLE = 1001
 
-
     private var pendingName = ""
-    private var pendingContact = ""  // email or phone
+    private var pendingContact = ""
     private var pendingPassword = ""
-    private var generatedOtp = ""    // for email SMTP OTP
+
+    private lateinit var cbConsent: CheckBox
+
+    companion object {
+        private const val TERMS_URL = "https://jithin-ji.github.io/dontry-privacy/terms.html"
+        private const val PRIVACY_URL = "https://jithin-ji.github.io/dontry-privacy/"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +50,6 @@ class RegisterActivity : BaseActivity() {
 
         auth = FirebaseAuth.getInstance()
         db   = FirebaseFirestore.getInstance()
-
 
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
@@ -56,8 +63,10 @@ class RegisterActivity : BaseActivity() {
         val btnRegister    = findViewById<Button>(R.id.btnRegister)
         val btnGoogle      = findViewById<LinearLayout>(R.id.btnGoogle)
         val tvLogin        = findViewById<TextView>(R.id.tvLogin)
+        cbConsent          = findViewById(R.id.cbConsent)
+        val tvConsent      = findViewById<TextView>(R.id.tvConsent)
 
-        // Style "Sign in" part in teal
+        // ── "Already have an account? Sign in" styling ──
         val fullText = "Already have an account? Sign in"
         val spannable = SpannableString(fullText)
         spannable.setSpan(
@@ -68,8 +77,15 @@ class RegisterActivity : BaseActivity() {
         )
         tvLogin.text = spannable
 
-        // Create Account button
+        // ── Consent text with clickable Terms of Service + Privacy Policy ──
+        setupConsentText(tvConsent)
+
         btnRegister.setOnClickListener {
+            if (!cbConsent.isChecked) {
+                Toast.makeText(this, "Please agree to the Terms of Service and Privacy Policy", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
             val name     = etName.text.toString().trim()
             val input    = etEmailOrPhone.text.toString().trim()
             val password = etPassword.text.toString().trim()
@@ -87,7 +103,6 @@ class RegisterActivity : BaseActivity() {
                 return@setOnClickListener
             }
 
-            // Show loading state
             btnRegister.isEnabled = false
             btnRegister.text = "Please wait…"
 
@@ -97,7 +112,7 @@ class RegisterActivity : BaseActivity() {
 
             when {
                 Patterns.EMAIL_ADDRESS.matcher(input).matches() ->
-                    sendEmailOtp(input, name, password)
+                    sendEmailOtp(input)
 
                 input.replace(" ", "").matches(Regex("^[+]?[0-9]{7,15}$")) ->
                     sendPhoneOtp(if (input.startsWith("+")) input else "+91$input")
@@ -109,8 +124,12 @@ class RegisterActivity : BaseActivity() {
             }
         }
 
-        // Google Sign-In
         btnGoogle.setOnClickListener {
+            if (!cbConsent.isChecked) {
+                Toast.makeText(this, "Please agree to the Terms of Service and Privacy Policy", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
             googleSignInClient.signOut().addOnCompleteListener {
                 startActivityForResult(googleSignInClient.signInIntent, RC_GOOGLE)
             }
@@ -119,130 +138,159 @@ class RegisterActivity : BaseActivity() {
         tvLogin.setOnClickListener { finish() }
     }
 
+    private fun setupConsentText(tvConsent: TextView) {
+        val fullText = "I agree to the Terms of Service and Privacy Policy"
+        val spannable = SpannableString(fullText)
+
+        val termsStart = fullText.indexOf("Terms of Service")
+        val termsEnd   = termsStart + "Terms of Service".length
+        val privacyStart = fullText.indexOf("Privacy Policy")
+        val privacyEnd   = privacyStart + "Privacy Policy".length
+
+        val tealColor = ContextCompat.getColor(this, R.color.teal)
+
+        spannable.setSpan(object : ClickableSpan() {
+            override fun onClick(widget: android.view.View) {
+                openUrl(TERMS_URL)
+            }
+            override fun updateDrawState(ds: TextPaint) {
+                super.updateDrawState(ds)
+                ds.color = tealColor
+                ds.isUnderlineText = false
+            }
+        }, termsStart, termsEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        spannable.setSpan(object : ClickableSpan() {
+            override fun onClick(widget: android.view.View) {
+                openUrl(PRIVACY_URL)
+            }
+            override fun updateDrawState(ds: TextPaint) {
+                super.updateDrawState(ds)
+                ds.color = tealColor
+                ds.isUnderlineText = false
+            }
+        }, privacyStart, privacyEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        tvConsent.text = spannable
+        tvConsent.movementMethod = LinkMovementMethod.getInstance()
+    }
+
+    private fun openUrl(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: Exception) {
+            Toast.makeText(this, "Couldn't open link", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun resetRegisterButton() {
         val btn = findViewById<Button>(R.id.btnRegister)
         btn.isEnabled = true
         btn.text = "Create Account"
     }
 
+    private fun sendEmailOtp(email: String) {
+        FirebaseAppCheck.getInstance().getAppCheckToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val appCheckToken = tokenResult.token
 
-    private fun sendEmailOtp(email: String, name: String, password: String) {
-        generatedOtp = (100000..999999).random().toString()
+                val json = JSONObject().put("email", email).put("password", pendingPassword).put("isRegister", true)
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("${Constants.API_BASE_URL}/send-email-otp")
+                    .header("X-Firebase-AppCheck", appCheckToken)
+                    .post(body)
+                    .build()
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val smtpEmail    = BuildConfig.SMTP_EMAIL
-                val smtpPassword = BuildConfig.SMTP_PASSWORD
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        runOnUiThread {
+                            resetRegisterButton()
+                            Toast.makeText(this@RegisterActivity, "❌ Failed to send OTP: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
 
-                val props = Properties().apply {
-                    put("mail.smtp.host", "smtp.gmail.com")
-                    put("mail.smtp.port", "587")
-                    put("mail.smtp.auth", "true")
-                    put("mail.smtp.starttls.enable", "true")
-                }
+                    override fun onResponse(call: Call, response: Response) {
+                        val resJson = JSONObject(response.body?.string() ?: "{}")
+                        runOnUiThread {
+                            resetRegisterButton()
+                            if (resJson.optBoolean("success")) {
+                                Toast.makeText(this@RegisterActivity, "OTP sent to $email", Toast.LENGTH_SHORT).show()
 
-                val session = Session.getInstance(props, object : Authenticator() {
-                    override fun getPasswordAuthentication() =
-                        PasswordAuthentication(smtpEmail, smtpPassword)
-                })
-
-                val message = MimeMessage(session).apply {
-                    setFrom(InternetAddress(smtpEmail, "Dontry"))
-                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(email))
-                    subject = "Your Dontry verification code"
-                    setText(
-                        "Hi $name,\n\n" +
-                                "Your Dontry verification code is: $generatedOtp\n\n" +
-                                "This code expires in 10 minutes.\n\n" +
-                                "— Dontry Team"
-                    )
-                }
-
-                Transport.send(message)
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@RegisterActivity,
-                        "OTP sent to $email",
-                        Toast.LENGTH_SHORT
-                    ).show()
-
-                    // Go to OTP screen
-                    val intent = Intent(this@RegisterActivity, OtpActivity::class.java)
-                    intent.putExtra("verificationId", generatedOtp)
-                    intent.putExtra("phone", email)
-                    intent.putExtra("name", pendingName)
-                    intent.putExtra("password", pendingPassword)
-                    intent.putExtra("isEmail", true)
-                    intent.putExtra("isRegister", true)
-                    startActivity(intent)
-
-                    // Reset button after navigating away
-                    resetRegisterButton()
-                }
-
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    resetRegisterButton()
-                    Toast.makeText(
-                        this@RegisterActivity,
-                        "❌ Failed to send OTP: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
-    }
-
-
-    private fun sendPhoneOtp(phone: String) {
-        val options = PhoneAuthOptions.newBuilder(auth)
-            .setPhoneNumber(phone)
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(this)
-            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-
-                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                    // Auto-verified (rare on real devices) — sign in directly
-                            auth.signInWithCredential(credential)
-                        .addOnSuccessListener { result ->
-                            val uid = result.user?.uid ?: return@addOnSuccessListener
-                            AuthHelper.ensureUserDoc(uid, pendingName, phone) { isNew ->
-                                if (isNew) startActivity(Intent(this@RegisterActivity, OnboardingActivity::class.java))
-                                else startActivity(Intent(this@RegisterActivity, MainActivity::class.java))
-                                finish()
+                                val intent = Intent(this@RegisterActivity, OtpActivity::class.java)
+                                intent.putExtra("verificationId", "")
+                                intent.putExtra("phone", email)
+                                intent.putExtra("name", pendingName)
+                                intent.putExtra("password", pendingPassword)
+                                intent.putExtra("isEmail", true)
+                                intent.putExtra("isRegister", true)
+                                startActivity(intent)
+                            } else {
+                                val msg = resJson.optString("message", "Failed to send OTP")
+                                Toast.makeText(this@RegisterActivity, "❌ $msg", Toast.LENGTH_LONG).show()
                             }
                         }
-                }
-
-                override fun onVerificationFailed(e: FirebaseException) {
+                    }
+                })
+            }
+            .addOnFailureListener {
+                runOnUiThread {
                     resetRegisterButton()
-                    Toast.makeText(
-                        this@RegisterActivity,
-                        "❌ ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(this@RegisterActivity, "Security check failed: ${it.message}", Toast.LENGTH_LONG).show()
                 }
+            }
+    }
 
-                override fun onCodeSent(
-                    verificationId: String,
-                    token: PhoneAuthProvider.ForceResendingToken
-                ) {
-                    val intent = Intent(this@RegisterActivity, OtpActivity::class.java)
-                    intent.putExtra("verificationId", verificationId)
-                    intent.putExtra("phone", phone)
-                    intent.putExtra("name", pendingName)
-                    intent.putExtra("isEmail", false)
-                    intent.putExtra("isRegister", true)
-                    startActivity(intent)
+    private fun sendPhoneOtp(phone: String) {
+        FirebaseAppCheck.getInstance().getAppCheckToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val appCheckToken = tokenResult.token
 
-                    // Reset button after navigating away
+                val json = JSONObject().put("phone", phone).put("password", pendingPassword).put("isRegister", true)
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("${Constants.API_BASE_URL}/send-phone-otp")
+                    .header("X-Firebase-AppCheck", appCheckToken)
+                    .post(body)
+                    .build()
+
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        runOnUiThread {
+                            resetRegisterButton()
+                            Toast.makeText(this@RegisterActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        val resJson = JSONObject(response.body?.string() ?: "{}")
+                        runOnUiThread {
+                            resetRegisterButton()
+                            if (resJson.optBoolean("success")) {
+                                val sessionId = resJson.optString("sessionId")
+
+                                val intent = Intent(this@RegisterActivity, OtpActivity::class.java)
+                                intent.putExtra("verificationId", sessionId)
+                                intent.putExtra("phone", phone)
+                                intent.putExtra("name", pendingName)
+                                intent.putExtra("password", pendingPassword)
+                                intent.putExtra("isEmail", false)
+                                intent.putExtra("isRegister", true)
+                                startActivity(intent)
+                            } else {
+                                val msg = resJson.optString("message", "Failed to send OTP")
+                                Toast.makeText(this@RegisterActivity, "❌ $msg", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                })
+            }
+            .addOnFailureListener {
+                runOnUiThread {
                     resetRegisterButton()
+                    Toast.makeText(this@RegisterActivity, "Security check failed: ${it.message}", Toast.LENGTH_LONG).show()
                 }
-            })
-            .build()
-
-        PhoneAuthProvider.verifyPhoneNumber(options)
+            }
     }
 
 
@@ -273,16 +321,7 @@ class RegisterActivity : BaseActivity() {
                 Toast.makeText(this,
                     "❌ Code: ${e.statusCode} - ${e.message}",
                     Toast.LENGTH_LONG).show()
-                android.util.Log.e("GOOGLE_SIGN_IN", "Error code: ${e.statusCode}")
             }
         }
-    }
-
-
-
-    private fun goToNext(isNew: Boolean) {
-        if (isNew) startActivity(Intent(this, OnboardingActivity::class.java))
-        else startActivity(Intent(this, MainActivity::class.java))
-        finish()
     }
 }

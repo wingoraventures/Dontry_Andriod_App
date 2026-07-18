@@ -1,6 +1,4 @@
 package com.dontry.app
-import com.google.firebase.analytics.FirebaseAnalytics
-import android.os.Bundle
 import android.app.*
 import android.content.Intent
 import android.graphics.Bitmap
@@ -43,6 +41,12 @@ class FloatingService : Service() {
     private var dot3: ImageView? = null
     private var dotsAnimJob: Job? = null
 
+    // ── Plan/credits cache (kept live via Firestore snapshot listener) ──
+    private var cachedTryonsRemaining: Int? = null
+    private var cachedTryonsTotal: Int? = null
+    private var cachedPlanId: String? = null
+    private var planListener: com.google.firebase.firestore.ListenerRegistration? = null
+
 
     private var selectedLookId: String? = null
 
@@ -80,6 +84,32 @@ class FloatingService : Service() {
             if (wakeLock?.isHeld == true) wakeLock?.release()
         } catch (e: Exception) { e.printStackTrace() }
         wakeLock = null
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  PLAN / CREDITS — live cache via Firestore snapshot listener
+    // ─────────────────────────────────────────────────────────────
+
+    private fun startPlanListener() {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) {
+            Log.w("Dontry", "startPlanListener: no signed-in user, skipping")
+            return
+        }
+
+        planListener = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("users").document(uid)
+            .addSnapshotListener { doc, error ->
+                if (error != null) {
+                    Log.e("Dontry", "Plan listener error: ${error.message}")
+                    return@addSnapshotListener
+                }
+                if (doc == null || !doc.exists()) return@addSnapshotListener
+
+                cachedTryonsRemaining = (doc.getLong("tryonsRemaining") ?: 0).toInt()
+                cachedTryonsTotal = (doc.getLong("tryonsTotal") ?: cachedTryonsRemaining!!.toLong()).toInt()
+                cachedPlanId = doc.getString("tryonPlan") ?: "Test Plan"
+            }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -156,6 +186,7 @@ class FloatingService : Service() {
         instance = this
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         createNotificationChannel()
+        startPlanListener()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -191,6 +222,8 @@ class FloatingService : Service() {
         serviceScope.cancel()
         releaseWakeLock()
         hideAll()
+        planListener?.remove()
+        planListener = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -381,19 +414,17 @@ class FloatingService : Service() {
                 isIconAttachedToWindow = true
                 isShowing = true
 
-                FirebaseAnalytics.getInstance(this).logEvent("floating_icon_shown", Bundle().apply {
-                    putString("model", android.os.Build.MODEL)
-                    putString("manufacturer", android.os.Build.MANUFACTURER)
-                    putInt("android_sdk", android.os.Build.VERSION.SDK_INT)
-                })
+                FirebaseCrashlytics.getInstance().log(
+                    "floating_icon_shown model=${android.os.Build.MODEL} manufacturer=${android.os.Build.MANUFACTURER} sdk=${android.os.Build.VERSION.SDK_INT}"
+                )
 
             } catch (e: Exception) {
-                FirebaseAnalytics.getInstance(this).logEvent("floating_icon_failed", Bundle().apply {
-                    putString("model", android.os.Build.MODEL)
-                    putString("manufacturer", android.os.Build.MANUFACTURER)
-                    putInt("android_sdk", android.os.Build.VERSION.SDK_INT)
-                    putString("error", e.message ?: "null")
-                })
+                FirebaseCrashlytics.getInstance().apply {
+                    setCustomKey("model", android.os.Build.MODEL)
+                    setCustomKey("manufacturer", android.os.Build.MANUFACTURER)
+                    setCustomKey("android_sdk", android.os.Build.VERSION.SDK_INT)
+                    recordException(e)
+                }
                 e.printStackTrace()
             }
 
@@ -525,41 +556,66 @@ class FloatingService : Service() {
         fun updateButtonForCredits() {
             if (currentTryonsRemaining <= 0) {
                 btnGenerate.text = "Upgrade • 0 left"
-                btnGenerate.isEnabled = true
             } else {
                 btnGenerate.text = "Generate Try-On • $currentTryonsRemaining left"
-                btnGenerate.isEnabled = true
             }
+            btnGenerate.isEnabled = true
         }
 
-        if (uid != null) {
+        fun applyPlanData(remaining: Int, total: Int, planId: String) {
+            currentTryonsRemaining = remaining
+            val displayName = planDisplay[planId]?.first ?: planId
+
+            tvTryonsCount.text = "$remaining / $total"
+            planTextView.text = "👑 Plan: $displayName"
+
+            val fillWeight = if (total > 0) {
+                (remaining.toFloat() / total).coerceIn(0f, 1f)
+            } else 0f
+            progressBarBg.removeAllViews()
+            progressBarBg.addView(progressBarFill.apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                    weight = fillWeight
+                }
+            })
+            progressBarBg.addView(View(this@FloatingService).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                    weight = 1f - fillWeight
+                }
+            })
+
+            updateButtonForCredits()
+        }
+
+        // Button must never be actionable with unverified data
+        btnGenerate.isEnabled = false
+        btnGenerate.text = "Loading..."
+
+        val cachedRemaining = cachedTryonsRemaining
+        if (cachedRemaining != null) {
+            // Fast path: data already synced by the background snapshot listener
+            applyPlanData(cachedRemaining, cachedTryonsTotal ?: cachedRemaining, cachedPlanId ?: "Test Plan")
+        } else if (uid != null) {
+            // Cold-start fallback: listener hasn't delivered data yet
             com.google.firebase.firestore.FirebaseFirestore.getInstance()
                 .collection("users").document(uid).get()
                 .addOnSuccessListener { doc ->
-                    currentTryonsRemaining = (doc.getLong("tryonsRemaining") ?: 0).toInt()
+                    val remaining = (doc.getLong("tryonsRemaining") ?: 0).toInt()
+                    val total = (doc.getLong("tryonsTotal") ?: remaining.toLong()).toInt()
                     val planId = doc.getString("tryonPlan") ?: "Test Plan"
-                    val totalTryons = (doc.getLong("tryonsTotal") ?: currentTryonsRemaining.toLong()).toInt()
-                    val displayName = planDisplay[planId]?.first ?: planId
-
-                    tvTryonsCount.text = "$currentTryonsRemaining / $totalTryons"
-                    planTextView.text = "👑 Plan: $displayName"
-
-                    val fillWeight = if (totalTryons > 0) {
-                        (currentTryonsRemaining.toFloat() / totalTryons).coerceIn(0f, 1f)
-                    } else 0f
-                    progressBarBg.removeAllViews()
-                    progressBarBg.addView(progressBarFill.apply {
-                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT).apply {
-                            weight = fillWeight
-                        }
-                    })
-                    progressBarBg.addView(View(this@FloatingService).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT).apply {
-                            weight = 1f - fillWeight
-                        }
-                    })
-
-                    updateButtonForCredits()
+                    applyPlanData(remaining, total, planId)
+                }
+                .addOnFailureListener { e ->
+                    Log.e("Dontry", "Plan fetch failed: ${e.message}")
+                    planTextView.text = "👑 Couldn't load plan"
+                    btnGenerate.text = "Retry"
+                    btnGenerate.isEnabled = true
+                    btnGenerate.setOnClickListener {
+                        hidePanel()
+                        showIconSafely()
+                        showPanel()
+                    }
+                    showOverlayToast("⚠️ Couldn't load your plan, tap Retry", 3000L)
                 }
         }
 
@@ -1144,13 +1200,13 @@ class FloatingService : Service() {
                 windowManager.removeView(iconView)
             } catch (e: Exception) {
                 // ── OEM forcefully removed our view ──────────────
-                FirebaseAnalytics.getInstance(this).logEvent("icon_hidden_error", Bundle().apply {
-                    putString("model", android.os.Build.MODEL)
-                    putString("manufacturer", android.os.Build.MANUFACTURER)
-                    putInt("android_sdk", android.os.Build.VERSION.SDK_INT)
-                    putString("error", e.message ?: "null")
-                    putString("reason", reason)
-                })
+                FirebaseCrashlytics.getInstance().apply {
+                    setCustomKey("model", android.os.Build.MODEL)
+                    setCustomKey("manufacturer", android.os.Build.MANUFACTURER)
+                    setCustomKey("android_sdk", android.os.Build.VERSION.SDK_INT)
+                    setCustomKey("reason", reason)
+                    recordException(e)
+                }
                 e.printStackTrace()
             }
             iconView = null

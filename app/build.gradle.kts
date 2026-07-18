@@ -18,13 +18,13 @@ android {
         applicationId = "com.dontry.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.20"
+        versionCode = 15
+        versionName = "1.15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "SMTP_EMAIL",    "\"${localProperties["SMTP_EMAIL"]}\"")
-        buildConfigField("String", "SMTP_PASSWORD", "\"${localProperties["SMTP_PASSWORD"]}\"")
+        buildConfigField("String", "API_BASE_URL",  "\"${localProperties["API_BASE_URL"]}\"")
+
     }
 
     buildFeatures {
@@ -88,17 +88,16 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
-    implementation("com.google.firebase:firebase-analytics-ktx")
+
 
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
-    // JavaMail for SMTP email OTP
-    implementation("com.sun.mail:android-mail:1.6.7")
-    implementation("com.sun.mail:android-activation:1.6.7")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity:18.0.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     implementation("com.razorpay:checkout:1.6.33")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

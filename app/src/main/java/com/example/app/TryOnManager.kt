@@ -15,11 +15,12 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.tasks.await
 import com.google.firebase.auth.FirebaseAuth
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 class TryOnManager(private val context: Context) {
 
     private val TRYON_API_URL = Constants.API_BASE_URL
-    private val TRYON_HOST = "web-production-ca122.up.railway.app"
+    private val TRYON_HOST = TRYON_API_URL.toHttpUrlOrNull()?.host ?: ""
 
     private var cachedIp: String? = null
     private var cacheTime: Long = 0
@@ -140,6 +141,7 @@ class TryOnManager(private val context: Context) {
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
+
         .dns(object : okhttp3.Dns {
             override fun lookup(hostname: String): List<java.net.InetAddress> {
                 return if (hostname == TRYON_HOST) resolveHostname(hostname)

@@ -63,7 +63,7 @@ class MainActivity : BaseActivity() {
         // ── Drawer nav clicks ──
         findViewById<LinearLayout>(R.id.drawerAccountSettings).setOnClickListener {
             drawerLayout.closeDrawer(Gravity.START)
-            // TODO: startActivity(Intent(this, AccountSettingsActivity::class.java))
+            startActivity(Intent(this, AccountSettingsActivity::class.java))
         }
 
         findViewById<LinearLayout>(R.id.drawerSubscription).setOnClickListener {
@@ -73,7 +73,7 @@ class MainActivity : BaseActivity() {
 
         findViewById<LinearLayout>(R.id.drawerHelpSupport).setOnClickListener {
             drawerLayout.closeDrawer(Gravity.START)
-            // TODO: startActivity(Intent(this, HelpSupportActivity::class.java))
+            startActivity(Intent(this, HelpSupportActivity::class.java))
         }
 
         findViewById<LinearLayout>(R.id.llProfileRow).setOnClickListener {

@@ -8,19 +8,24 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthCredential
-import com.google.firebase.auth.PhoneAuthProvider
-import com.google.firebase.firestore.FirebaseFirestore
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.IOException
+import com.google.firebase.appcheck.FirebaseAppCheck
 
 class OtpActivity : BaseActivity() {
 
     private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
+    private val client = OkHttpClient()
 
-    private var verificationId = ""
+    private var verificationId = ""  // sessionId (phone) or unused (email)
     private var isEmail = false
     private var isRegister = false
     private var pendingName = ""
+    private var pendingPassword = ""
+    private lateinit var phone: String
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,13 +33,13 @@ class OtpActivity : BaseActivity() {
         applyWindowInsets(findViewById(android.R.id.content))
 
         auth = FirebaseAuth.getInstance()
-        db   = FirebaseFirestore.getInstance()
 
-        verificationId = intent.getStringExtra("verificationId") ?: ""
-        val phone      = intent.getStringExtra("phone") ?: ""
-        isEmail        = intent.getBooleanExtra("isEmail", false)
-        isRegister     = intent.getBooleanExtra("isRegister", false)
-        pendingName    = intent.getStringExtra("name") ?: ""
+        verificationId  = intent.getStringExtra("verificationId") ?: ""
+        phone           = intent.getStringExtra("phone") ?: ""
+        isEmail         = intent.getBooleanExtra("isEmail", false)
+        isRegister      = intent.getBooleanExtra("isRegister", false)
+        pendingName     = intent.getStringExtra("name") ?: ""
+        pendingPassword = intent.getStringExtra("password") ?: ""
 
         val tvTitle   = findViewById<TextView>(R.id.tvTitle)
         val tvPhone   = findViewById<TextView>(R.id.tvPhoneHint)
@@ -43,60 +48,153 @@ class OtpActivity : BaseActivity() {
         val tvResend  = findViewById<TextView>(R.id.tvResend)
         val tvBack    = findViewById<TextView>(R.id.tvBack)
 
-        // Update title dynamically based on login type
         tvTitle.text = if (isEmail) "Verify your email" else "Verify your number"
-
         tvPhone.text = "Code sent to $phone"
 
         startResendTimer(tvResend)
 
         btnVerify.setOnClickListener {
             val code = etOtp.text.toString().trim()
-            if (code.length < 6) {
-                etOtp.error = "Enter 6-digit code"
+            if (code.length < 4) {
+                etOtp.error = "Enter 4-digit code"
                 return@setOnClickListener
             }
-            if (isEmail) verifyEmailOtp(code, phone)
-            else verifyPhoneOtp(code, phone)
+            btnVerify.isEnabled = false
+            btnVerify.text = "Verifying..."
+
+            if (isEmail) verifyEmailOtp(code, phone, btnVerify)
+            else verifyPhoneOtp(code, phone, btnVerify)
         }
 
-        tvResend.setOnClickListener { finish() }
+
+        tvResend.setOnClickListener {
+            if (tvResend.isEnabled) resendOtp(tvResend)
+        }
         tvBack.setOnClickListener { finish() }
     }
 
-    // Email OTP — just compare the 6-digit string
-    private fun verifyEmailOtp(code: String, email: String) {
-        if (code == verificationId) {
-            // OTP matched — now create Firebase account
-            val password = intent.getStringExtra("password") ?: ""
-            FirebaseAuth.getInstance()
-                .createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener { result ->
-                    val uid = result.user?.uid ?: return@addOnSuccessListener
-                    saveAndProceed(uid, pendingName, email)
-                }
-                .addOnFailureListener {
-                    Toast.makeText(this, "❌ ${it.message}", Toast.LENGTH_LONG).show()
-                }
-        } else {
-            Toast.makeText(this, "❌ Wrong code. Try again.", Toast.LENGTH_LONG).show()
-        }
-    }
 
-    // Phone OTP — Firebase credential
-    private fun verifyPhoneOtp(code: String, phone: String) {
-        val credential: PhoneAuthCredential =
-            PhoneAuthProvider.getCredential(verificationId, code)
+    private fun resendOtp(tvResend: TextView) {
+        tvResend.isEnabled = false
 
-        auth.signInWithCredential(credential)
-            .addOnSuccessListener { result ->
-                val uid = result.user?.uid ?: return@addOnSuccessListener
-                saveAndProceed(uid, pendingName, phone)
+        FirebaseAppCheck.getInstance().getAppCheckToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val appCheckToken = tokenResult.token
+
+                val json = JSONObject().apply {
+                    if (isEmail) put("email", phone) else put("phone", phone)
+                    put("password", pendingPassword)
+                    put("isRegister", isRegister)
+                }
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val url = if (isEmail) "${Constants.API_BASE_URL}/send-email-otp"
+                else "${Constants.API_BASE_URL}/send-phone-otp"
+
+                val request = Request.Builder()
+                    .url(url)
+                    .header("X-Firebase-AppCheck", appCheckToken)
+                    .post(body)
+                    .build()
+
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        runOnUiThread {
+                            Toast.makeText(this@OtpActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
+                            startResendTimer(tvResend)
+                        }
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        val resJson = JSONObject(response.body?.string() ?: "{}")
+                        runOnUiThread {
+                            if (resJson.optBoolean("success")) {
+                                if (!isEmail) verificationId = resJson.optString("sessionId")
+                                Toast.makeText(this@OtpActivity, "OTP resent", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(this@OtpActivity, "❌ ${resJson.optString("message")}", Toast.LENGTH_LONG).show()
+                            }
+                            startResendTimer(tvResend)
+                        }
+                    }
+                })
             }
             .addOnFailureListener {
-                Toast.makeText(this, "❌ Wrong code. Try again.", Toast.LENGTH_LONG).show()
+                runOnUiThread {
+                    Toast.makeText(this@OtpActivity, "Security check failed: ${it.message}", Toast.LENGTH_LONG).show()
+                    startResendTimer(tvResend)
+                }
             }
     }
+
+
+    private fun verifyEmailOtp(code: String, email: String, btnVerify: Button) {
+        val json = JSONObject().put("email", email).put("otp", code)
+        callVerify("${Constants.API_BASE_URL}/verify-email-otp", json, email, btnVerify)
+    }
+
+    private fun verifyPhoneOtp(code: String, phoneNum: String, btnVerify: Button) {
+        val json = JSONObject()
+            .put("sessionId", verificationId)
+            .put("otp", code)
+            .put("phone", phoneNum)
+        callVerify("${Constants.API_BASE_URL}/verify-phone-otp", json, phoneNum, btnVerify)
+    }
+
+    private fun callVerify(url: String, json: JSONObject, contact: String, btnVerify: Button) {
+        FirebaseAppCheck.getInstance().getAppCheckToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val appCheckToken = tokenResult.token
+
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url(url)
+                    .header("X-Firebase-AppCheck", appCheckToken)
+                    .post(body)
+                    .build()
+
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        runOnUiThread {
+                            btnVerify.isEnabled = true
+                            btnVerify.text = "Verify"
+                            Toast.makeText(this@OtpActivity, "❌ ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        val resJson = JSONObject(response.body?.string() ?: "{}")
+
+                        runOnUiThread {
+                            btnVerify.isEnabled = true
+                            btnVerify.text = "Verify"
+
+                            if (resJson.optBoolean("success")) {
+                                val token = resJson.getString("token")
+                                auth.signInWithCustomToken(token)
+                                    .addOnSuccessListener { result ->
+                                        val uid = result.user?.uid ?: return@addOnSuccessListener
+                                        saveAndProceed(uid, pendingName, contact)
+                                    }
+                                    .addOnFailureListener {
+                                        Toast.makeText(this@OtpActivity, "❌ Sign-in failed: ${it.message}", Toast.LENGTH_LONG).show()
+                                    }
+                            } else {
+                                val msg = resJson.optString("message", "Invalid OTP")
+                                Toast.makeText(this@OtpActivity, "❌ $msg", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                })
+            }
+            .addOnFailureListener {
+                runOnUiThread {
+                    btnVerify.isEnabled = true
+                    btnVerify.text = "Verify"
+                    Toast.makeText(this@OtpActivity, "Security check failed: ${it.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+    }
+
 
     private fun saveAndProceed(uid: String, name: String, contact: String) {
         AuthHelper.ensureUserDoc(uid, name, contact) { isNew ->

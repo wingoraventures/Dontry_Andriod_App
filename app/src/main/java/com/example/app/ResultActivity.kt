@@ -16,6 +16,7 @@ import androidx.core.content.FileProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.*
+import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.FileOutputStream
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -197,6 +198,9 @@ class ResultActivity : BaseActivity() {
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                val idToken = FirebaseAuth.getInstance().currentUser
+                    ?.getIdToken(false)?.await()?.token ?: return@launch
+
                 val json = org.json.JSONObject().apply {
                     put("product_brand", productBrand)
                     put("product_name", productName)
@@ -209,6 +213,7 @@ class ResultActivity : BaseActivity() {
                 )
                 val request = okhttp3.Request.Builder()
                     .url("${Constants.API_BASE_URL}/feedback")
+                    .header("Authorization", "Bearer $idToken")
                     .post(body)
                     .build()
                 client.newCall(request).execute().use { response ->

@@ -56,6 +56,43 @@
             android:orientation="vertical"
             android:padding="24dp">
 
+            <!-- Disclosure box -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_disclosure_box"
+                android:padding="16dp"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Enable Accessibility for Dontry"
+                    android:textColor="#0d9488"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Dontry uses Android Accessibility Service to detect when you are viewing a supported shopping product page. This allows Dontry to display the Virtual Try-On button over compatible products."
+                    android:textColor="#1a1a1a"
+                    android:textSize="13sp"
+                    android:lineSpacingMultiplier="1.4"
+                    android:layout_marginBottom="10dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Dontry does not read your passwords, personal messages, or keystrokes. The service is only used to identify supported product pages and provide the Virtual Try-On experience."
+                    android:textColor="#4a4a4a"
+                    android:textSize="12sp"
+                    android:lineSpacingMultiplier="1.4"/>
+
+            </LinearLayout>
+
             <!-- Step 1 -->
             <TextView
                 android:layout_width="wrap_content"
@@ -139,7 +176,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Scroll down for Step 3 ↓"
+            android:text="Scroll down for Step 2 &amp; 3 ↓"
             android:textColor="#0d9488"
             android:textSize="11sp"
             android:textStyle="bold"/>

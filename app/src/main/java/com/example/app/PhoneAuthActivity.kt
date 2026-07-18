@@ -6,28 +6,24 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.FirebaseException
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.PhoneAuthCredential
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import java.util.concurrent.TimeUnit
+import com.google.firebase.appcheck.FirebaseAppCheck
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.IOException
 
 class PhoneAuthActivity : BaseActivity() {
 
-    private lateinit var auth: FirebaseAuth
     private lateinit var etPhone: EditText
     private lateinit var btnSend: Button
     private lateinit var tvBack: TextView
+    private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_phone_auth)
         applyWindowInsets(findViewById(android.R.id.content))
-
-
-        auth = FirebaseAuth.getInstance()
 
         etPhone = findViewById(R.id.etPhone)
         btnSend = findViewById(R.id.btnSendOtp)
@@ -41,9 +37,7 @@ class PhoneAuthActivity : BaseActivity() {
                 return@setOnClickListener
             }
 
-            // Phone must include country code e.g. +919876543210
             val fullPhone = if (phone.startsWith("+")) phone else "+91$phone"
-
             sendOtp(fullPhone)
         }
 
@@ -54,45 +48,60 @@ class PhoneAuthActivity : BaseActivity() {
         btnSend.isEnabled = false
         btnSend.text = "Sending..."
 
-        val options = PhoneAuthOptions.newBuilder(auth)
-            .setPhoneNumber(phoneNumber)
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(this)
-            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
-                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
-                    auth.signInWithCredential(credential)
-                        .addOnSuccessListener { result ->
-                            val uid = result.user?.uid ?: return@addOnSuccessListener
-                            AuthHelper.ensureUserDoc(uid, "", phoneNumber) { isNew ->
-                                if (isNew) startActivity(Intent(this@PhoneAuthActivity, OnboardingActivity::class.java))
-                                else startActivity(Intent(this@PhoneAuthActivity, MainActivity::class.java))
-                                finish()
+        FirebaseAppCheck.getInstance().getAppCheckToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val appCheckToken = tokenResult.token
+
+                val json = JSONObject().put("phone", phoneNumber).put("isRegister", false)
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("${Constants.API_BASE_URL}/send-phone-otp")
+                    .header("X-Firebase-AppCheck", appCheckToken)
+                    .post(body)
+                    .build()
+
+                client.newCall(request).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        runOnUiThread {
+                            btnSend.isEnabled = true
+                            btnSend.text = "Send OTP"
+                            Toast.makeText(this@PhoneAuthActivity, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        val resBody = response.body?.string() ?: "{}"
+                        val resJson = JSONObject(resBody)
+
+                        runOnUiThread {
+                            btnSend.isEnabled = true
+                            btnSend.text = "Send OTP"
+
+                            if (resJson.optBoolean("success")) {
+                                val sessionId = resJson.optString("sessionId")
+
+                                val intent = Intent(this@PhoneAuthActivity, OtpActivity::class.java)
+                                intent.putExtra("verificationId", sessionId)
+                                intent.putExtra("phone", phoneNumber)
+                                intent.putExtra("isEmail", false)
+                                intent.putExtra("isRegister", false)
+                                intent.putExtra("password", "")
+                                startActivity(intent)
+                            } else {
+                                val msg = resJson.optString("message", "Failed to send OTP")
+                                Toast.makeText(this@PhoneAuthActivity, "❌ $msg", Toast.LENGTH_LONG).show()
                             }
                         }
-                }
-
-                override fun onVerificationFailed(e: FirebaseException) {
+                    }
+                })
+            }
+            .addOnFailureListener {
+                runOnUiThread {
                     btnSend.isEnabled = true
                     btnSend.text = "Send OTP"
-                    Toast.makeText(this@PhoneAuthActivity, "Failed: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@PhoneAuthActivity, "Security check failed: ${it.message}", Toast.LENGTH_LONG).show()
                 }
-
-                override fun onCodeSent(
-                    verificationId: String,
-                    token: PhoneAuthProvider.ForceResendingToken
-                ) {
-                    // Go to OTP screen
-                    val intent = Intent(this@PhoneAuthActivity, OtpActivity::class.java)
-                    intent.putExtra("verificationId", verificationId)
-                    intent.putExtra("phone", phoneNumber)
-                    startActivity(intent)
-                    btnSend.isEnabled = true
-                    btnSend.text = "Send OTP"
-                }
-            })
-            .build()
-
-        PhoneAuthProvider.verifyPhoneNumber(options)
+            }
     }
 }
