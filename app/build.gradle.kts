@@ -12,14 +12,14 @@ localProperties.load(rootProject.file("local.properties").inputStream())
 
 android {
     namespace = "com.dontry.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.dontry.app"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 15
-        versionName = "1.15"
+        targetSdk = 36
+        versionCode = 17
+        versionName = "1.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -96,7 +96,7 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck-playintegrity:18.0.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-    implementation("com.razorpay:checkout:1.6.33")
+    implementation("com.android.billingclient:billing-ktx:8.0.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
 
     implementation(libs.androidx.core.ktx)

@@ -186,7 +186,7 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="12dp"/>
 
-            <!-- Plan grid row 1: 1 Tryon / 5 Tryon -->
+            <!-- Plan grid row 1: Starter / Basic -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -213,6 +213,15 @@
                         android:textColor="#1a1a1a"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1 Tryon"
+                        android:textColor="#0d9488"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -256,6 +265,15 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text="5 Tryons"
+                        android:textColor="#0d9488"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:text="₹119"
                         android:textColor="#0d9488"
                         android:textSize="18sp"
@@ -272,7 +290,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Plan grid row 2: 10 Tryon / 50 Tryon (Most Popular) -->
+            <!-- Plan grid row 2: Popular / Value (Most Popular) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -299,6 +317,15 @@
                         android:textColor="#1a1a1a"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="10 Tryons"
+                        android:textColor="#0d9488"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -347,6 +374,15 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:text="50 Tryons"
+                            android:textColor="#e0f2f1"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="2dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="₹799"
                             android:textColor="#ffffff"
                             android:textSize="18sp"
@@ -379,7 +415,7 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <!-- Plan grid row 3: 100 Tryon / 1000 Tryon -->
+            <!-- Plan grid row 3: Pro / Ultimate -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -406,6 +442,15 @@
                         android:textColor="#1a1a1a"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100 Tryons"
+                        android:textColor="#0d9488"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -445,6 +490,15 @@
                         android:textColor="#1a1a1a"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1000 Tryons"
+                        android:textColor="#0d9488"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp"/>
 
                     <TextView
                         android:layout_width="wrap_content"

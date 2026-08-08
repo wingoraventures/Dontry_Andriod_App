@@ -2,25 +2,34 @@ package com.dontry.app
 
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
+import com.android.billingclient.api.Purchase as BillingPurchase
 import com.google.firebase.auth.FirebaseAuth
-import com.razorpay.Checkout
-import com.razorpay.PaymentData
-import com.razorpay.PaymentResultWithDataListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.tasks.await
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.tasks.await
+import com.android.billingclient.api.PendingPurchasesParams
 
-class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
+class PaymentActivity : BaseActivity(), PurchasesUpdatedListener {
 
     private val TRYON_API_URL = Constants.API_BASE_URL
 
@@ -30,9 +39,8 @@ class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
         .build()
 
     private lateinit var planId: String
-    private var orderId: String = ""
-    private var amount: Int = 0
-    private var keyId: String = ""
+    private lateinit var billingClient: BillingClient
+    private var productDetails: ProductDetails? = null
 
     private val planDisplay = mapOf(
         "test"           to Triple("Test Plan", "5 tryons", "No expiry"),
@@ -43,6 +51,16 @@ class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
         "50tryon"   to Triple("Value", "50 tryons", "Valid 30 days"),
         "100tryon"  to Triple("Pro", "100 tryons", "Valid 60 days"),
         "1000tryon" to Triple("Ultimate", "1000 tryons", "Valid 1 year")
+    )
+
+    private val productIdMap = mapOf(
+        "test"      to "tryon_test",
+        "1tryon"    to "tryon_1",
+        "5tryon"    to "tryon_5",
+        "10tryon"   to "tryon_10",
+        "50tryon"   to "tryon_50",
+        "100tryon"  to "tryon_100",
+        "1000tryon" to "tryon_1000"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,11 +76,39 @@ class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
         findViewById<android.widget.ImageView>(R.id.btnBack).setOnClickListener { finish() }
 
         val (name, tryons, validity) = planDisplay[planId] ?: Triple(planId, "", "")
-        findViewById<android.widget.TextView>(R.id.tvPlanName).text = name
-        findViewById<android.widget.TextView>(R.id.tvPlanDetails).text = "$tryons • $validity"
+        findViewById<TextView>(R.id.tvPlanName).text = name
+        findViewById<TextView>(R.id.tvPlanDetails).text = "$tryons • $validity"
 
-        Checkout.preload(applicationContext)
-        createOrder()
+        val btnPay = findViewById<Button>(R.id.btnPayNow)
+        btnPay.isEnabled = false
+        btnPay.text = "Loading..."
+
+        billingClient = BillingClient.newBuilder(this)
+            .setListener(this)
+            .enablePendingPurchases(
+                com.android.billingclient.api.PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build()
+            )
+            .build()
+
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(result: BillingResult) {
+                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    queryProductAndShowPrice()
+                } else {
+                    Toast.makeText(this@PaymentActivity, "Billing unavailable", Toast.LENGTH_LONG).show()
+                }
+            }
+            override fun onBillingServiceDisconnected() {}
+        })
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::billingClient.isInitialized && billingClient.isReady) {
+            checkExistingPurchase()
+        }
     }
 
     private fun showVerifyOverlay() {
@@ -73,113 +119,110 @@ class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
         findViewById<LinearLayout>(R.id.verifyOverlay).visibility = View.GONE
     }
 
-    private fun createOrder() {
-        val btnPay = findViewById<android.widget.Button>(R.id.btnPayNow)
-        btnPay.isEnabled = false
-        btnPay.text = "Loading..."
+    private fun queryProductAndShowPrice() {
+        val productId = productIdMap[planId] ?: run {
+            Toast.makeText(this, "Plan not configured", Toast.LENGTH_SHORT).show()
+            finish(); return
+        }
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val body = JSONObject().apply { put("plan_id", planId) }
-                    .toString().toRequestBody("application/json".toMediaType())
+        val product = QueryProductDetailsParams.Product.newBuilder()
+            .setProductId(productId)
+            .setProductType(BillingClient.ProductType.INAPP)
+            .build()
 
-                val token = FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token
-                    ?: run {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@PaymentActivity, "Please log in again", Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                        return@launch
-                    }
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(listOf(product))
+            .build()
 
-                val request = Request.Builder()
-                    .url("$TRYON_API_URL/payment/create-order")
-                    .header("Authorization", "Bearer $token")
-                    .post(body)
-                    .build()
-
-                val response = client.newCall(request).execute()
-                val json = JSONObject(response.body?.string() ?: "")
-
-                withContext(Dispatchers.Main) {
-                    if (response.isSuccessful && json.optBoolean("success")) {
-                        orderId = json.getString("order_id")
-                        amount  = json.getInt("amount")
-                        keyId   = json.getString("key_id")
-
-                        findViewById<android.widget.TextView>(R.id.tvPlanPrice).text = "₹${amount / 100}"
-                        btnPay.isEnabled = true
-                        btnPay.text = "Pay Now"
-                        btnPay.setOnClickListener { startCheckout() }
-                    } else {
-                        Toast.makeText(this@PaymentActivity,
-                            json.optString("message", "Failed to create order"), Toast.LENGTH_LONG).show()
+        billingClient.queryProductDetailsAsync(params, object : com.android.billingclient.api.ProductDetailsResponseListener {
+            override fun onProductDetailsResponse(
+                result: BillingResult,
+                queryProductDetailsResult: com.android.billingclient.api.QueryProductDetailsResult
+            ) {
+                runOnUiThread {
+                    val details = queryProductDetailsResult.productDetailsList.firstOrNull()
+                    if (result.responseCode != BillingClient.BillingResponseCode.OK || details == null) {
+                        Toast.makeText(this@PaymentActivity, "Failed to load plan price", Toast.LENGTH_LONG).show()
                         finish()
+                        return@runOnUiThread
                     }
+                    productDetails = details
+                    val price = details.oneTimePurchaseOfferDetails?.formattedPrice ?: ""
+                    findViewById<TextView>(R.id.tvPlanPrice).text = price
+
+                    val btnPay = findViewById<Button>(R.id.btnPayNow)
+                    btnPay.isEnabled = true
+                    btnPay.text = "Pay Now"
+                    btnPay.setOnClickListener { launchPurchaseFlow() }
                 }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@PaymentActivity, "Network error: ${e.message}", Toast.LENGTH_LONG).show()
-                    finish()
+            }
+        })
+    }
+
+    private fun launchPurchaseFlow() {
+        val details = productDetails ?: return
+
+        val productParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(details)
+            .build()
+
+        val flowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(listOf(productParams))
+            .build()
+
+        billingClient.launchBillingFlow(this, flowParams)
+    }
+
+    override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<BillingPurchase>?) {
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                purchases?.forEach { handlePurchase(it) }
+            }
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                Toast.makeText(this, "Payment cancelled", Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                Toast.makeText(this, "Payment failed: ${result.debugMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun checkExistingPurchase() {
+        val params = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.INAPP)
+            .build()
+
+        billingClient.queryPurchasesAsync(params) { result, purchases ->
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                purchases.forEach { p ->
+                    if (p.purchaseState == BillingPurchase.PurchaseState.PURCHASED && p.products.contains(productIdMap[planId])) {
+                        handlePurchase(p)
+                    }
                 }
             }
         }
     }
 
-    private fun startCheckout() {
-        val checkout = Checkout()
-        checkout.setKeyID(keyId)
-
-        val options = JSONObject().apply {
-            put("name", "Dontry")
-            put("description", "Try-On Plan Purchase")
-            put("order_id", orderId)
-            put("currency", "INR")
-            put("amount", amount)
-            put("prefill", JSONObject().apply {
-                put("email", FirebaseAuth.getInstance().currentUser?.email ?: "")
-            })
-        }
-
-        try {
-            checkout.open(this, options)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error starting payment: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    override fun onPaymentSuccess(razorpayPaymentId: String?, data: PaymentData?) {
-        val paymentId = razorpayPaymentId ?: return
-        val orderIdFromResp = data?.orderId ?: orderId
-        val signature = data?.signature ?: run {
-            Toast.makeText(this, "Missing payment signature", Toast.LENGTH_LONG).show()
+    private fun handlePurchase(purchase: BillingPurchase) {
+        if (purchase.purchaseState != BillingPurchase.PurchaseState.PURCHASED) {
             return
         }
-
-        // Show loading overlay immediately — Razorpay sheet closed, verify API call about to start
         showVerifyOverlay()
-
-        verifyPayment(orderIdFromResp, paymentId, signature)
+        verifyPurchaseOnBackend(purchase.purchaseToken)
     }
 
-    override fun onPaymentError(code: Int, description: String?, response: PaymentData?) {
-        Toast.makeText(this, "Payment failed: $description", Toast.LENGTH_LONG).show()
-    }
-
-    private fun verifyPayment(razorpayOrderId: String, razorpayPaymentId: String, razorpaySignature: String) {
+    private fun verifyPurchaseOnBackend(purchaseToken: String) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val body = JSONObject().apply {
                     put("plan_id", planId)
-                    put("razorpay_order_id", razorpayOrderId)
-                    put("razorpay_payment_id", razorpayPaymentId)
-                    put("razorpay_signature", razorpaySignature)
+                    put("purchase_token", purchaseToken)
                 }.toString().toRequestBody("application/json".toMediaType())
 
                 val token = FirebaseAuth.getInstance().currentUser?.getIdToken(false)?.await()?.token ?: ""
 
                 val request = Request.Builder()
-                    .url("$TRYON_API_URL/payment/verify")
+                    .url("$TRYON_API_URL/payment/verify-play")
                     .header("Authorization", "Bearer $token")
                     .post(body)
                     .build()
@@ -205,5 +248,10 @@ class PaymentActivity : BaseActivity(), PaymentResultWithDataListener {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::billingClient.isInitialized) billingClient.endConnection()
     }
 }

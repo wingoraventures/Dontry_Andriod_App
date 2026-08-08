@@ -718,6 +718,7 @@ class TryVueAccessibilityService : AccessibilityService() {
         val root = rootInActiveWindow ?: return
 
         bgExecutor.execute {
+            dumpClickables(root)
             val allTexts = mutableListOf<String>()
             collectAllTexts(root, allTexts)
             // fullText = entire page → used only for button detection
@@ -736,8 +737,11 @@ class TryVueAccessibilityService : AccessibilityService() {
             Log.d("Dontry", "=== END ===")
 
             // Buttons can appear anywhere — use full page text
-            val hasCart    = CART_BUTTON_SIGNALS.any { fullText.contains(it) }
-            val hasBuyNow  = BUY_NOW_SIGNALS.any { fullText.contains(it) }
+            val foundButtons = mutableSetOf<String>()
+            findButtons(root, listOf("add-to-cart-button", "buy-now-button"), foundButtons)
+
+            val hasCart = foundButtons.contains("add-to-cart-button") || CART_BUTTON_SIGNALS.any { fullText.contains(it) }
+            val hasBuyNow = foundButtons.contains("buy-now-button") || BUY_NOW_SIGNALS.any { fullText.contains(it) }
             val hasAddToBag = fullText.contains("add to bag")
 
             val isAmazonPkg   = pkg == "in.amazon.mShop.android.shopping" ||
@@ -828,8 +832,11 @@ class TryVueAccessibilityService : AccessibilityService() {
                                     val freshProductText = freshTexts.take(60).joinToString(" ").lowercase()
 
                                     // Buttons → full page text
-                                    val freshCart     = CART_BUTTON_SIGNALS.any { freshText.contains(it) }
-                                    val freshBuyNow   = BUY_NOW_SIGNALS.any { freshText.contains(it) }
+                                    val freshFoundButtons = mutableSetOf<String>()
+                                    findButtons(freshRoot, listOf("add-to-cart-button", "buy-now-button"), freshFoundButtons)
+
+                                    val freshCart     = freshFoundButtons.contains("add-to-cart-button") || CART_BUTTON_SIGNALS.any { freshText.contains(it) }
+                                    val freshBuyNow   = freshFoundButtons.contains("buy-now-button") || BUY_NOW_SIGNALS.any { freshText.contains(it) }
                                     val freshAddToBag = freshText.contains("add to bag")
                                     // Clothing → product area only (first 60 nodes)
                                     val (freshClothing, freshMethod) = detectClothing(freshProductText)
@@ -883,6 +890,37 @@ class TryVueAccessibilityService : AccessibilityService() {
         cancelPendingHide()
         cancelPendingRetry()
         retryCount = 0
+    }
+
+
+    private fun dumpClickables(node: AccessibilityNodeInfo?) {
+        node ?: return
+        if (node.isClickable) {
+            Log.d("Dontry", "CLICK id=${node.viewIdResourceName} cls=${node.className} text=${node.text} desc=${node.contentDescription}")
+        }
+        for (i in 0 until node.childCount) {
+            dumpClickables(node.getChild(i))
+        }
+    }
+
+
+    private fun findButtons(node: AccessibilityNodeInfo?, targetIds: List<String>, found: MutableSet<String>) {
+        node ?: return
+        val id = node.viewIdResourceName
+        if (id != null) {
+            for (target in targetIds) {
+                if (id.endsWith(target)) {
+                    found.add(target)
+                }
+            }
+        }
+        // Early exit — stop walking once everything is found
+        if (found.size == targetIds.size) return
+
+        for (i in 0 until node.childCount) {
+            findButtons(node.getChild(i), targetIds, found)
+            if (found.size == targetIds.size) return
+        }
     }
 
 
